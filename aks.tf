@@ -8,6 +8,7 @@ resource "azurerm_kubernetes_cluster" "stage_aks_cluster" {
 
   automatic_upgrade_channel = "patch"
   private_cluster_enabled   = false
+  sku_tier                  = var.stage_aks_sku_tier
 
   default_node_pool {
     name                   = var.stage_default_node_pool.name
@@ -79,6 +80,7 @@ resource "azurerm_kubernetes_cluster" "prod_aks_cluster" {
   dns_prefix          = "${local.prod_name_prefix}-aks"
 
   private_cluster_enabled = false
+  sku_tier                = var.prod_aks_sku_tier
 
   default_node_pool {
     name                   = var.prod_default_node_pool.name

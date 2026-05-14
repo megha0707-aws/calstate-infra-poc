@@ -12,6 +12,7 @@ This template prepares the Azure foundation for Grouper and related DCS applicat
 - Dedicated `/27` PostgreSQL Flexible Server delegated subnets
 - Dedicated `/27` AKS node subnets
 - AKS clusters using Azure CNI Overlay
+- Prod AKS cluster using the `Standard` pricing tier / Stage AKS using the `Free` tier
 - `Standard_D4ds_v6` default AKS node pools
 - Log Analytics workspaces
 - Azure Container Registries

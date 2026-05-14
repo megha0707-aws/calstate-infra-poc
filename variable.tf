@@ -70,6 +70,28 @@ variable "authorized_ip_ranges" {
   default     = ["137.145.0.0/16"]
 }
 
+variable "stage_aks_sku_tier" {
+  description = "AKS pricing tier for the stage cluster."
+  type        = string
+  default     = "Free"
+
+  validation {
+    condition     = contains(["Free", "Standard", "Premium"], var.stage_aks_sku_tier)
+    error_message = "stage_aks_sku_tier must be one of Free, Standard, or Premium."
+  }
+}
+
+variable "prod_aks_sku_tier" {
+  description = "AKS pricing tier for the prod cluster."
+  type        = string
+  default     = "Standard"
+
+  validation {
+    condition     = contains(["Free", "Standard", "Premium"], var.prod_aks_sku_tier)
+    error_message = "prod_aks_sku_tier must be one of Free, Standard, or Premium."
+  }
+}
+
 variable "stage_default_node_pool" {
   description = "Configuration for the stage default AKS node pool."
   type = object({
