@@ -1,4 +1,4 @@
-# Cal State DCS Terraform Infra
+# CalState DCS Terraform Infrastructure - Grouper
 
 Terraform template for DCS Grouper AKS `stage` and `prod` clusters in **West US 2**. This infrastructure is intended for Grouper and closely related supporting applications. This repo is code only; nothing has been deployed from it yet.
 
