@@ -136,11 +136,76 @@ variable "prod_default_node_pool" {
   }
 }
 
+variable "grouper_namespace" {
+  description = "Kubernetes namespace reserved for Grouper workloads."
+  type        = string
+  default     = "grouper"
+
+  validation {
+    condition     = can(regex("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", var.grouper_namespace))
+    error_message = "grouper_namespace must be a valid Kubernetes namespace name."
+  }
+}
+
+variable "stage_grouper_node_pool" {
+  description = "Configuration for the stage Grouper user node pool."
+  type = object({
+    name                          = string
+    vm_size                       = string
+    node_count                    = number
+    mode                          = string
+    node_labels                   = map(string)
+    node_taints                   = list(string)
+    drain_timeout_in_minutes      = number
+    max_surge                     = string
+    node_soak_duration_in_minutes = number
+  })
+  default = {
+    name                          = "grouper"
+    vm_size                       = "Standard_D4ds_v6"
+    node_count                    = 1
+    mode                          = "User"
+    node_labels                   = { workload = "grouper" }
+    node_taints                   = ["workload=grouper:NoSchedule"]
+    drain_timeout_in_minutes      = 0
+    max_surge                     = "10%"
+    node_soak_duration_in_minutes = 0
+  }
+}
+
+variable "prod_grouper_node_pool" {
+  description = "Configuration for the prod Grouper user node pool."
+  type = object({
+    name                          = string
+    vm_size                       = string
+    node_count                    = number
+    mode                          = string
+    node_labels                   = map(string)
+    node_taints                   = list(string)
+    drain_timeout_in_minutes      = number
+    max_surge                     = string
+    node_soak_duration_in_minutes = number
+  })
+  default = {
+    name                          = "grouper"
+    vm_size                       = "Standard_D4ds_v6"
+    node_count                    = 2
+    mode                          = "User"
+    node_labels                   = { workload = "grouper" }
+    node_taints                   = ["workload=grouper:NoSchedule"]
+    drain_timeout_in_minutes      = 0
+    max_surge                     = "10%"
+    node_soak_duration_in_minutes = 0
+  }
+}
+
 variable "stage_network_profile" {
   description = "Network profile configuration for the stage AKS cluster."
   type = object({
     network_plugin      = string
     network_plugin_mode = string
+    network_data_plane  = string
+    network_policy      = string
     pod_cidr            = string
     service_cidr        = string
     dns_service_ip      = string
@@ -148,8 +213,10 @@ variable "stage_network_profile" {
   default = {
     network_plugin      = "azure"
     network_plugin_mode = "overlay"
-    pod_cidr            = "10.244.0.0/24"
-    service_cidr        = "10.21.0.0/22"
+    network_data_plane  = "cilium"
+    network_policy      = "cilium"
+    pod_cidr            = "10.22.0.0/20"
+    service_cidr        = "10.21.0.0/21"
     dns_service_ip      = "10.21.0.10"
   }
 }
@@ -159,6 +226,8 @@ variable "prod_network_profile" {
   type = object({
     network_plugin      = string
     network_plugin_mode = string
+    network_data_plane  = string
+    network_policy      = string
     pod_cidr            = string
     service_cidr        = string
     dns_service_ip      = string
@@ -166,9 +235,55 @@ variable "prod_network_profile" {
   default = {
     network_plugin      = "azure"
     network_plugin_mode = "overlay"
-    pod_cidr            = "10.245.0.0/24"
-    service_cidr        = "10.31.0.0/22"
+    network_data_plane  = "cilium"
+    network_policy      = "cilium"
+    pod_cidr            = "10.32.0.0/20"
+    service_cidr        = "10.31.0.0/21"
     dns_service_ip      = "10.31.0.10"
+  }
+}
+
+variable "stage_grouper_postgresql" {
+  description = "Configuration for the stage Grouper PostgreSQL Flexible Server."
+  type = object({
+    administrator_login          = string
+    version                      = string
+    sku_name                     = string
+    storage_mb                   = number
+    backup_retention_days        = number
+    geo_redundant_backup_enabled = bool
+    database_name                = string
+  })
+  default = {
+    administrator_login          = "pgadmin"
+    version                      = "16"
+    sku_name                     = "B_Standard_B1ms"
+    storage_mb                   = 32768
+    backup_retention_days        = 7
+    geo_redundant_backup_enabled = false
+    database_name                = "grouper"
+  }
+}
+
+variable "prod_grouper_postgresql" {
+  description = "Configuration for the prod Grouper PostgreSQL Flexible Server."
+  type = object({
+    administrator_login          = string
+    version                      = string
+    sku_name                     = string
+    storage_mb                   = number
+    backup_retention_days        = number
+    geo_redundant_backup_enabled = bool
+    database_name                = string
+  })
+  default = {
+    administrator_login          = "pgadmin"
+    version                      = "16"
+    sku_name                     = "GP_Standard_D2ds_v5"
+    storage_mb                   = 65536
+    backup_retention_days        = 14
+    geo_redundant_backup_enabled = false
+    database_name                = "grouper"
   }
 }
 

@@ -25,6 +25,20 @@ output "configuration_summary" {
         name = azurerm_log_analytics_workspace.stage.name
         id   = azurerm_log_analytics_workspace.stage.id
       }
+      grouper_postgresql = {
+        name             = azurerm_postgresql_flexible_server.stage_grouper.name
+        id               = azurerm_postgresql_flexible_server.stage_grouper.id
+        fqdn             = azurerm_postgresql_flexible_server.stage_grouper.fqdn
+        database_name    = azurerm_postgresql_flexible_server_database.stage_grouper.name
+        private_dns_zone = azurerm_private_dns_zone.stage_grouper_postgresql.name
+      }
+      node_pools = {
+        system  = var.stage_default_node_pool.name
+        grouper = azurerm_kubernetes_cluster_node_pool.stage_grouper.name
+      }
+      namespaces = {
+        grouper = kubernetes_namespace_v1.stage_grouper.metadata[0].name
+      }
     }
 
     prod = {
@@ -50,6 +64,20 @@ output "configuration_summary" {
       log_analytics = {
         name = azurerm_log_analytics_workspace.prod.name
         id   = azurerm_log_analytics_workspace.prod.id
+      }
+      grouper_postgresql = {
+        name             = azurerm_postgresql_flexible_server.prod_grouper.name
+        id               = azurerm_postgresql_flexible_server.prod_grouper.id
+        fqdn             = azurerm_postgresql_flexible_server.prod_grouper.fqdn
+        database_name    = azurerm_postgresql_flexible_server_database.prod_grouper.name
+        private_dns_zone = azurerm_private_dns_zone.prod_grouper_postgresql.name
+      }
+      node_pools = {
+        system  = var.prod_default_node_pool.name
+        grouper = azurerm_kubernetes_cluster_node_pool.prod_grouper.name
+      }
+      namespaces = {
+        grouper = kubernetes_namespace_v1.prod_grouper.metadata[0].name
       }
     }
   }

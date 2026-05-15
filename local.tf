@@ -11,15 +11,18 @@ locals {
   stage_vnet_cidr     = "10.20.0.0/16"
   stage_appgw_cidr    = "10.20.4.0/26"
   stage_psql_cidr     = "10.20.6.0/27"
-  stage_aks_node_cidr = "10.20.8.0/27"
+  stage_aks_node_cidr = "10.20.8.0/24"
 
   prod_vnet_cidr     = "10.30.0.0/16"
   prod_appgw_cidr    = "10.30.4.0/26"
   prod_psql_cidr     = "10.30.6.0/27"
-  prod_aks_node_cidr = "10.30.8.0/27"
+  prod_aks_node_cidr = "10.30.8.0/24"
 
   stage_aks_cluster_name = "aks-${local.stage_name_prefix}-cluster"
   prod_aks_cluster_name  = "aks-${local.prod_name_prefix}-cluster"
+
+  stage_grouper_postgresql_server_name = "psql-${local.stage_name_prefix}-grouper"
+  prod_grouper_postgresql_server_name  = "psql-${local.prod_name_prefix}-grouper"
 
   common_tags = {
     ManagedBy = "Terraform"

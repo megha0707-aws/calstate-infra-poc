@@ -28,6 +28,8 @@ resource "azurerm_kubernetes_cluster" "stage_aks_cluster" {
   network_profile {
     network_plugin      = var.stage_network_profile.network_plugin
     network_plugin_mode = var.stage_network_profile.network_plugin_mode
+    network_data_plane  = var.stage_network_profile.network_data_plane
+    network_policy      = var.stage_network_profile.network_policy
     pod_cidr            = var.stage_network_profile.pod_cidr
     service_cidr        = var.stage_network_profile.service_cidr
     dns_service_ip      = var.stage_network_profile.dns_service_ip
@@ -71,6 +73,23 @@ resource "azurerm_role_assignment" "stage_acr_pull" {
   principal_id         = azurerm_kubernetes_cluster.stage_aks_cluster.kubelet_identity[0].object_id
 }
 
+resource "azurerm_kubernetes_cluster_node_pool" "stage_grouper" {
+  name                  = var.stage_grouper_node_pool.name
+  kubernetes_cluster_id = azurerm_kubernetes_cluster.stage_aks_cluster.id
+  vm_size               = var.stage_grouper_node_pool.vm_size
+  node_count            = var.stage_grouper_node_pool.node_count
+  mode                  = var.stage_grouper_node_pool.mode
+  vnet_subnet_id        = azurerm_subnet.stage-aks-tf-subnet.id
+  node_labels           = var.stage_grouper_node_pool.node_labels
+  node_taints           = var.stage_grouper_node_pool.node_taints
+
+  upgrade_settings {
+    drain_timeout_in_minutes      = var.stage_grouper_node_pool.drain_timeout_in_minutes
+    max_surge                     = var.stage_grouper_node_pool.max_surge
+    node_soak_duration_in_minutes = var.stage_grouper_node_pool.node_soak_duration_in_minutes
+  }
+}
+
 # /================================ Prod AKS CLUSTER CONFIGURATION ============================================/
 
 resource "azurerm_kubernetes_cluster" "prod_aks_cluster" {
@@ -100,6 +119,8 @@ resource "azurerm_kubernetes_cluster" "prod_aks_cluster" {
   network_profile {
     network_plugin      = var.prod_network_profile.network_plugin
     network_plugin_mode = var.prod_network_profile.network_plugin_mode
+    network_data_plane  = var.prod_network_profile.network_data_plane
+    network_policy      = var.prod_network_profile.network_policy
     pod_cidr            = var.prod_network_profile.pod_cidr
     service_cidr        = var.prod_network_profile.service_cidr
     dns_service_ip      = var.prod_network_profile.dns_service_ip
@@ -141,4 +162,21 @@ resource "azurerm_role_assignment" "prod_acr_pull" {
   scope                = azurerm_container_registry.prod.id
   role_definition_name = "AcrPull"
   principal_id         = azurerm_kubernetes_cluster.prod_aks_cluster.kubelet_identity[0].object_id
+}
+
+resource "azurerm_kubernetes_cluster_node_pool" "prod_grouper" {
+  name                  = var.prod_grouper_node_pool.name
+  kubernetes_cluster_id = azurerm_kubernetes_cluster.prod_aks_cluster.id
+  vm_size               = var.prod_grouper_node_pool.vm_size
+  node_count            = var.prod_grouper_node_pool.node_count
+  mode                  = var.prod_grouper_node_pool.mode
+  vnet_subnet_id        = azurerm_subnet.prod-aks-tf-subnet.id
+  node_labels           = var.prod_grouper_node_pool.node_labels
+  node_taints           = var.prod_grouper_node_pool.node_taints
+
+  upgrade_settings {
+    drain_timeout_in_minutes      = var.prod_grouper_node_pool.drain_timeout_in_minutes
+    max_surge                     = var.prod_grouper_node_pool.max_surge
+    node_soak_duration_in_minutes = var.prod_grouper_node_pool.node_soak_duration_in_minutes
+  }
 }
