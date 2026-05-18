@@ -1,12 +1,12 @@
-resource "azurerm_container_registry" "stage" {
-  name                = local.stage_acr_name
-  resource_group_name = azurerm_resource_group.stage.name
-  location            = azurerm_resource_group.stage.location
+resource "azurerm_container_registry" "dev" {
+  name                = local.dev_acr_name
+  resource_group_name = azurerm_resource_group.dev.name
+  location            = azurerm_resource_group.dev.location
   sku                 = "Basic"
   admin_enabled       = false
 
   tags = merge(local.common_tags, {
-    env = "stage"
+    env = "dev"
   })
 }
 

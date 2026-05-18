@@ -1,12 +1,12 @@
-resource "azurerm_log_analytics_workspace" "stage" {
-  name                = "${local.stage_name_prefix}-law-logs"
-  location            = azurerm_resource_group.stage.location
-  resource_group_name = azurerm_resource_group.stage.name
+resource "azurerm_log_analytics_workspace" "dev" {
+  name                = "${local.dev_name_prefix}-law-logs"
+  location            = azurerm_resource_group.dev.location
+  resource_group_name = azurerm_resource_group.dev.name
   sku                 = "PerGB2018"
   retention_in_days   = 30
 
   tags = merge(local.common_tags, {
-    env = "stage"
+    env = "dev"
   })
 }
 

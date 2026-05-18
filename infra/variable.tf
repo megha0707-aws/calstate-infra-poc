@@ -1,19 +1,19 @@
 variable "subscription_id" {
-  description = "Azure subscription ID for the DCS shared AKS deployment."
+  description = "Azure subscription ID for the Grouper AKS deployment."
   type        = string
   default     = "REPLACE_WITH_SUBSCRIPTION_ID"
 }
 
 variable "location" {
-  description = "Azure region for stage and prod infrastructure."
+  description = "Azure region for dev and prod Grouper infrastructure."
   type        = string
   default     = "westus2"
 }
 
 variable "deployment_name" {
-  description = "Short deployment name used to keep resource names unique to this stack."
+  description = "Short deployment name used to keep Grouper resource names unique."
   type        = string
-  default     = "dcs-apps"
+  default     = "grouper"
 
   validation {
     condition     = can(regex("^[a-z0-9-]{3,30}$", var.deployment_name))
@@ -21,14 +21,14 @@ variable "deployment_name" {
   }
 }
 
-variable "resource_group_name_stage" {
-  description = "Optional stage resource group name. Leave null to derive one from deployment_name and prefix.stage."
+variable "resource_group_name_dev" {
+  description = "Optional dev resource group name. Leave null to derive one from deployment_name and prefix.dev."
   type        = string
   default     = null
 
   validation {
-    condition     = var.resource_group_name_stage == null || can(regex("^[A-Za-z0-9._()\\-]{1,90}$", var.resource_group_name_stage))
-    error_message = "resource_group_name_stage must be 1-90 Azure-compatible resource group name characters when set."
+    condition     = var.resource_group_name_dev == null || can(regex("^[A-Za-z0-9._()\\-]{1,90}$", var.resource_group_name_dev))
+    error_message = "resource_group_name_dev must be 1-90 Azure-compatible resource group name characters when set."
   }
 }
 
@@ -47,13 +47,13 @@ variable "prefix" {
   description = "Environment labels appended to deployment_name for Azure resource names."
   type        = map(string)
   default = {
-    stage = "stage"
-    prod  = "prod"
+    dev  = "dev"
+    prod = "prod"
   }
 
   validation {
-    condition     = contains(keys(var.prefix), "stage") && contains(keys(var.prefix), "prod")
-    error_message = "prefix must include stage and prod keys."
+    condition     = contains(keys(var.prefix), "dev") && contains(keys(var.prefix), "prod")
+    error_message = "prefix must include dev and prod keys."
   }
 
   validation {
@@ -65,24 +65,24 @@ variable "prefix" {
 }
 
 variable "authorized_ip_ranges" {
-  description = "CIDRs allowed to access the AKS API server."
+  description = "CIDRs allowed to access the AKS API servers."
   type        = list(string)
   default     = ["137.145.0.0/16"]
 }
 
-variable "stage_aks_sku_tier" {
-  description = "AKS pricing tier for the stage cluster."
+variable "dev_aks_sku_tier" {
+  description = "AKS pricing tier for the dev Grouper cluster."
   type        = string
   default     = "Free"
 
   validation {
-    condition     = contains(["Free", "Standard", "Premium"], var.stage_aks_sku_tier)
-    error_message = "stage_aks_sku_tier must be one of Free, Standard, or Premium."
+    condition     = contains(["Free", "Standard", "Premium"], var.dev_aks_sku_tier)
+    error_message = "dev_aks_sku_tier must be one of Free, Standard, or Premium."
   }
 }
 
 variable "prod_aks_sku_tier" {
-  description = "AKS pricing tier for the prod cluster."
+  description = "AKS pricing tier for the prod Grouper cluster."
   type        = string
   default     = "Standard"
 
@@ -92,8 +92,8 @@ variable "prod_aks_sku_tier" {
   }
 }
 
-variable "stage_default_node_pool" {
-  description = "Configuration for the stage default AKS node pool."
+variable "dev_default_node_pool" {
+  description = "Configuration for the dev Grouper AKS default node pool."
   type = object({
     name                          = string
     vm_size                       = string
@@ -105,8 +105,8 @@ variable "stage_default_node_pool" {
   })
   default = {
     name                          = "default"
-    vm_size                       = "Standard_D4ds_v6"
-    node_count                    = 3
+    vm_size                       = "Standard_D2ads_v5"
+    node_count                    = 1
     node_public_ip_enabled        = false
     drain_timeout_in_minutes      = 0
     max_surge                     = "10%"
@@ -115,7 +115,7 @@ variable "stage_default_node_pool" {
 }
 
 variable "prod_default_node_pool" {
-  description = "Configuration for the prod default AKS node pool."
+  description = "Configuration for the prod Grouper AKS default node pool."
   type = object({
     name                          = string
     vm_size                       = string
@@ -127,8 +127,8 @@ variable "prod_default_node_pool" {
   })
   default = {
     name                          = "default"
-    vm_size                       = "Standard_D4ds_v6"
-    node_count                    = 3
+    vm_size                       = "Standard_D2ads_v5"
+    node_count                    = 2
     node_public_ip_enabled        = false
     drain_timeout_in_minutes      = 0
     max_surge                     = "10%"
@@ -136,71 +136,8 @@ variable "prod_default_node_pool" {
   }
 }
 
-variable "grouper_namespace" {
-  description = "Kubernetes namespace reserved for Grouper workloads."
-  type        = string
-  default     = "grouper"
-
-  validation {
-    condition     = can(regex("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", var.grouper_namespace))
-    error_message = "grouper_namespace must be a valid Kubernetes namespace name."
-  }
-}
-
-variable "stage_grouper_node_pool" {
-  description = "Configuration for the stage Grouper user node pool."
-  type = object({
-    name                          = string
-    vm_size                       = string
-    node_count                    = number
-    mode                          = string
-    node_labels                   = map(string)
-    node_taints                   = list(string)
-    drain_timeout_in_minutes      = number
-    max_surge                     = string
-    node_soak_duration_in_minutes = number
-  })
-  default = {
-    name                          = "grouper"
-    vm_size                       = "Standard_D4ds_v6"
-    node_count                    = 1
-    mode                          = "User"
-    node_labels                   = { workload = "grouper" }
-    node_taints                   = ["workload=grouper:NoSchedule"]
-    drain_timeout_in_minutes      = 0
-    max_surge                     = "10%"
-    node_soak_duration_in_minutes = 0
-  }
-}
-
-variable "prod_grouper_node_pool" {
-  description = "Configuration for the prod Grouper user node pool."
-  type = object({
-    name                          = string
-    vm_size                       = string
-    node_count                    = number
-    mode                          = string
-    node_labels                   = map(string)
-    node_taints                   = list(string)
-    drain_timeout_in_minutes      = number
-    max_surge                     = string
-    node_soak_duration_in_minutes = number
-  })
-  default = {
-    name                          = "grouper"
-    vm_size                       = "Standard_D4ds_v6"
-    node_count                    = 2
-    mode                          = "User"
-    node_labels                   = { workload = "grouper" }
-    node_taints                   = ["workload=grouper:NoSchedule"]
-    drain_timeout_in_minutes      = 0
-    max_surge                     = "10%"
-    node_soak_duration_in_minutes = 0
-  }
-}
-
-variable "stage_network_profile" {
-  description = "Network profile configuration for the stage AKS cluster."
+variable "dev_network_profile" {
+  description = "Network profile configuration for the dev Grouper AKS cluster."
   type = object({
     network_plugin      = string
     network_plugin_mode = string
@@ -215,14 +152,14 @@ variable "stage_network_profile" {
     network_plugin_mode = "overlay"
     network_data_plane  = "cilium"
     network_policy      = "cilium"
-    pod_cidr            = "10.22.0.0/20"
-    service_cidr        = "10.21.0.0/21"
+    pod_cidr            = "10.22.0.0/21"
+    service_cidr        = "10.21.0.0/24"
     dns_service_ip      = "10.21.0.10"
   }
 }
 
 variable "prod_network_profile" {
-  description = "Network profile configuration for the prod AKS cluster."
+  description = "Network profile configuration for the prod Grouper AKS cluster."
   type = object({
     network_plugin      = string
     network_plugin_mode = string
@@ -237,14 +174,14 @@ variable "prod_network_profile" {
     network_plugin_mode = "overlay"
     network_data_plane  = "cilium"
     network_policy      = "cilium"
-    pod_cidr            = "10.32.0.0/20"
-    service_cidr        = "10.31.0.0/21"
+    pod_cidr            = "10.32.0.0/21"
+    service_cidr        = "10.31.0.0/24"
     dns_service_ip      = "10.31.0.10"
   }
 }
 
-variable "stage_grouper_postgresql" {
-  description = "Configuration for the stage Grouper PostgreSQL Flexible Server."
+variable "dev_grouper_postgresql" {
+  description = "Configuration for the dev Grouper PostgreSQL Flexible Server."
   type = object({
     administrator_login          = string
     version                      = string
@@ -287,14 +224,14 @@ variable "prod_grouper_postgresql" {
   }
 }
 
-variable "stage_acr_name" {
-  description = "Optional globally unique Azure Container Registry name for stage. Leave null to generate one with a stable random suffix."
+variable "dev_acr_name" {
+  description = "Optional globally unique Azure Container Registry name for dev. Leave null to generate one with a stable random suffix."
   type        = string
   default     = null
 
   validation {
-    condition     = var.stage_acr_name == null || can(regex("^[a-zA-Z0-9]{5,50}$", var.stage_acr_name))
-    error_message = "stage_acr_name must be 5-50 alphanumeric characters when set."
+    condition     = var.dev_acr_name == null || can(regex("^[a-zA-Z0-9]{5,50}$", var.dev_acr_name))
+    error_message = "dev_acr_name must be 5-50 alphanumeric characters when set."
   }
 }
 

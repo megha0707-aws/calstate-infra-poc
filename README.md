@@ -1,26 +1,37 @@
-# CalState DCS Terraform Infrastructure
+# CalState Grouper Terraform Infrastructure
 
-Terraform template for shared DCS AKS `stage` and `prod` clusters in **West US 2**. The Azure foundation is universal for DCS application workloads. Grouper is the first app-specific workload and gets its own Kubernetes namespace and dedicated user node pool.
+Terraform template for dedicated Grouper AKS infrastructure in **West US 2**.
+This stack creates two AKS clusters:
+
+- `dev`
+- `prod`
+
 
 This repo is code only; nothing has been deployed from it yet.
 
+Terraform lives in the `infra/` folder. Run Terraform commands from there:
+
+```powershell
+Set-Location infra
+terraform init
+terraform plan
+```
+
 ## Architecture
 
-This template prepares the Azure foundation for DCS applications:
+This template prepares the Azure foundation for Grouper:
 
-- Resource groups for `stage` and `prod`
+- Resource groups for `dev` and `prod`
 - VNets for each environment
 - Dedicated `/26` Application Gateway subnets
 - Dedicated `/27` PostgreSQL Flexible Server delegated subnets
 - Private Grouper PostgreSQL Flexible Servers with private DNS
-- Dedicated `/24` AKS node subnets
-- AKS clusters using Azure CNI Overlay
-- Prod AKS cluster using the `Standard` pricing tier / Stage AKS using the `Free` tier
-- `Standard_D4ds_v6` default AKS system node pools
-- Dedicated Grouper user node pools
-- `grouper` Kubernetes namespace in each cluster
+- Dedicated AKS node subnets
+- Dedicated Grouper AKS clusters using Azure CNI Overlay
+- Dev AKS cluster using the `Free` pricing tier
+- Prod AKS cluster using the `Standard` pricing tier
+- Default AKS node pools only; no separate Grouper user node pools
 - Azure CNI powered by Cilium for network policy enforcement
-- Baseline Grouper namespace NetworkPolicies
 - Log Analytics workspaces
 - Azure Container Registries
 - `AcrPull` role assignments from AKS to ACR
@@ -28,112 +39,84 @@ This template prepares the Azure foundation for DCS applications:
 ## Network Defaults
 
 ```text
-stage VNet       = 10.20.0.0/16  Azure network for stage resources
-stage AppGW      = 10.20.4.0/26  Dedicated Application Gateway subnet
-stage PostgreSQL = 10.20.6.0/27  Delegated PostgreSQL Flexible Server subnet
-stage AKS nodes  = 10.20.8.0/24  AKS node subnet
-stage pods       = 10.22.0.0/20  AKS overlay pod IP range
-stage services   = 10.21.0.0/21  Kubernetes ClusterIP service range
+dev VNet        = 172.28.10.0/24   Azure network for dev resources
+dev AppGW       = 172.28.10.0/26   Dedicated Application Gateway subnet
+dev PostgreSQL  = 172.28.10.64/27  Delegated PostgreSQL Flexible Server subnet
+dev AKS nodes   = 172.28.10.96/27  AKS node subnet
+dev pods        = 10.22.0.0/21   AKS overlay pod IP range
+dev services    = 10.21.0.0/24   Kubernetes ClusterIP service range
 
-prod VNet        = 10.30.0.0/16  Azure network for prod resources
-prod AppGW       = 10.30.4.0/26  Dedicated Application Gateway subnet
-prod PostgreSQL  = 10.30.6.0/27  Delegated PostgreSQL Flexible Server subnet
-prod AKS nodes   = 10.30.8.0/24  AKS node subnet
-prod pods        = 10.32.0.0/20  AKS overlay pod IP range
-prod services    = 10.31.0.0/21  Kubernetes ClusterIP service range
+prod VNet       = 172.28.20.0/24   Azure network for prod resources
+prod AppGW      = 172.28.20.0/26   Dedicated Application Gateway subnet
+prod PostgreSQL = 172.28.20.64/27  Delegated PostgreSQL Flexible Server subnet
+prod AKS nodes  = 172.28.20.96/27  AKS node subnet
+prod pods       = 10.32.0.0/21   AKS overlay pod IP range
+prod services   = 10.31.0.0/24   Kubernetes ClusterIP service range
 ```
 
-AKS uses Azure CNI Overlay, so pod IPs come from the overlay pod CIDRs, not from the AKS node subnets.
+AKS uses Azure CNI Overlay, so pod IPs come from the overlay pod CIDRs, not from
+the AKS node subnets. Each `/21` overlay pod range leaves room for up to eight
+AKS nodes because Azure CNI Overlay allocates pod space to nodes in `/24`
+blocks.
 
-The AKS node and pod ranges are sized for shared clusters with future app-specific node pools and namespaces, not only for the initial Grouper workload.
+The Application Gateway subnets remain `/26` because Azure recommends `/26` as
+the minimum Application Gateway subnet size. The PostgreSQL delegated subnets
+remain `/27`, while the AKS node subnets are `/27` because these Grouper-only
+clusters currently have small node counts and can still grow beyond the initial
+dev/prod node defaults.
 
-The network ranges serve different purposes:
-
-- VNet, AppGW, PostgreSQL, and AKS node ranges are real Azure VNet/subnet IP ranges.
-- Pod ranges are Kubernetes overlay IPs used by pods inside AKS.
-- Service ranges are Kubernetes `ClusterIP` virtual service IPs used inside AKS.
-- These ranges do not need to be adjacent, but they must not overlap with each other, peered VNets, VPN/on-prem networks, or other AKS clusters.
+The network ranges must not overlap with each other, peered VNets, VPN/on-prem
+networks, or other AKS clusters.
 
 ## Naming
 
 Defaults:
 
 ```text
-location        = "westus2"
-deployment_name = "dcs-apps"
-prefix.stage    = "stage"
-prefix.prod     = "prod"
-grouper_namespace = "grouper"
+location         = "westus2"
+deployment_name  = "grouper"
+prefix.dev       = "dev"
+prefix.prod      = "prod"
 ```
 
 Example names:
 
 ```text
-rg-dcs-apps-stage
-dcs-apps-stage-tf-vnet
-dcs-apps-stage-tf-appgw-subnet
-dcs-apps-stage-tf-psql-subnet
-dcs-apps-stage-tf-aks-subnet
-aks-dcs-apps-stage-cluster
-dcs-apps-stage-law-logs
+rg-grouper-dev
+grouper-dev-tf-vnet
+grouper-dev-tf-appgw-subnet
+grouper-dev-tf-psql-subnet
+grouper-dev-tf-aks-subnet
+aks-grouper-dev-cluster
+grouper-dev-law-logs
 ```
 
-ACR names cannot contain hyphens and must be globally unique, so they are generated with stable random suffixes unless `stage_acr_name` or `prod_acr_name` is set.
+ACR names cannot contain hyphens and must be globally unique, so they are
+generated with stable random suffixes unless `dev_acr_name` or `prod_acr_name`
+is set.
 
-## Workload Isolation
+## Kubernetes Resources
 
-Grouper workloads are intended to run in the `grouper` namespace on the dedicated `grouper` user node pool. The system/default node pool is kept for AKS and platform components.
+This Terraform stack does not manage Kubernetes namespaces, deployments,
+services, ingress objects, or NetworkPolicy resources. Those should be delivered
+later by the application deployment workflow, such as Helm, Argo CD, or another
+GitOps pipeline.
 
-Future applications can follow the same pattern: add a dedicated namespace and, when isolation or scaling requires it, a separate app-specific user node pool. This lets new applications be added without rebuilding the AKS environment.
-
-The `grouper` node pool is tainted with `workload=grouper:NoSchedule`, so workloads scheduled there need a matching toleration.
-
-## Network Microsegmentation
-
-AKS is configured with Azure CNI Overlay plus Cilium:
-
-```text
-network_plugin      = "azure"
-network_plugin_mode = "overlay"
-network_data_plane  = "cilium"
-network_policy      = "cilium"
-```
-
-The Grouper namespace has baseline Kubernetes NetworkPolicies:
-
-- `default-deny`: denies all ingress and egress for Grouper pods unless another policy allows it.
-- `allow-dns-egress`: allows Grouper pods to reach CoreDNS in `kube-system` on TCP/UDP 53.
-
-Application-specific allow policies still need to be added with the application manifests, for example ingress-to-UI, UI-to-WS, WS-to-daemon, and Grouper-to-PostgreSQL flows.
+Because each AKS cluster is dedicated to Grouper, Grouper workloads can run in
+the cluster's regular application namespace strategy without this infrastructure
+stack creating a separate namespace.
 
 ## Grouper Database
 
-The PostgreSQL delegated subnet is part of the shared network foundation, but the PostgreSQL Flexible Server created by this template is Grouper-specific:
+Each environment gets a private PostgreSQL Flexible Server for Grouper:
 
 ```text
-azurerm_postgresql_flexible_server.stage_grouper
+azurerm_postgresql_flexible_server.dev_grouper
 azurerm_postgresql_flexible_server.prod_grouper
 ```
 
-Future applications that need their own database should add separate database resources rather than reusing the Grouper PostgreSQL server.
-
-## Terraform Resource Aliases
-
-Terraform resource aliases are environment-specific. Shared infrastructure aliases remain app-neutral, while workload aliases identify the application they isolate:
-
-```text
-azurerm_kubernetes_cluster_node_pool.stage_grouper
-azurerm_kubernetes_cluster_node_pool.prod_grouper
-kubernetes_namespace_v1.stage_grouper
-kubernetes_namespace_v1.prod_grouper
-```
-
-Provider aliases remain environment-specific:
-
-```text
-kubernetes.stage
-kubernetes.prod
-```
+The PostgreSQL admin passwords are generated by Terraform `random_password`
+resources and stored in Terraform state.
 
 ## Not Included Yet
 
@@ -141,19 +124,21 @@ kubernetes.prod
 - Key Vault
 - Application Insights
 - Workload managed identities
-- App-specific NetworkPolicies, ingress, app manifests, or ArgoCD bootstrap
-- Additional app-specific namespaces or node pools beyond Grouper
+- Kubernetes manifests, ingress objects, app services, deployments, or Argo CD bootstrap
+- Kubernetes NetworkPolicies
 - Diagnostic settings beyond the Log Analytics workspace
 - Key Vault storage for generated PostgreSQL admin credentials
 
 ## Replace Before Planning
 
-- `backend.tf`: Terraform state backend values
-- `variable.tf`: `subscription_id`
-- `variable.tf`: `authorized_ip_ranges`
-- `variable.tf`: `stage_grouper_postgresql` and `prod_grouper_postgresql` sizing/database defaults
-- `local.tf`: CIDRs, if these defaults are not final
+- `infra/backend.tf`: Terraform state backend values
+- `infra/variable.tf`: `subscription_id`
+- `infra/variable.tf`: `authorized_ip_ranges`
+- `infra/variable.tf`: `dev_grouper_postgresql` and `prod_grouper_postgresql` sizing/database defaults
+- `infra/local.tf`: CIDRs, if these defaults are not final
 
 ## Secrets Note
 
-Grouper PostgreSQL admin passwords are generated with Terraform `random_password` resources. They are not printed in outputs, but they are stored in Terraform state. Treat the configured backend as sensitive.
+Grouper PostgreSQL admin passwords are generated with Terraform
+`random_password` resources. They are not printed in outputs, but they are
+stored in Terraform state. Treat the configured backend as sensitive.

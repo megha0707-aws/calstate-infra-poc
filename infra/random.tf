@@ -1,4 +1,4 @@
-resource "random_string" "stage_acr_suffix" {
+resource "random_string" "dev_acr_suffix" {
   length  = 6
   lower   = true
   numeric = true
@@ -14,7 +14,7 @@ resource "random_string" "prod_acr_suffix" {
   upper   = false
 }
 
-resource "random_password" "stage_grouper_postgresql_admin" {
+resource "random_password" "dev_grouper_postgresql_admin" {
   length           = 24
   special          = true
   override_special = "!#$%&*()-_=+[]{}<>:?"

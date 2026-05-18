@@ -1,30 +1,28 @@
-# /******************************** Stage NETWORK CONFIGURATION **********************************************/
+# /******************************** Dev NETWORK CONFIGURATION **********************************************/
 
-resource "azurerm_virtual_network" "stage-tf-vnet" {
-  name                = "${local.stage_name_prefix}-tf-vnet"
-  location            = azurerm_resource_group.stage.location
-  resource_group_name = azurerm_resource_group.stage.name
-  address_space       = [local.stage_vnet_cidr]
+resource "azurerm_virtual_network" "dev-tf-vnet" {
+  name                = "${local.dev_name_prefix}-tf-vnet"
+  location            = azurerm_resource_group.dev.location
+  resource_group_name = azurerm_resource_group.dev.name
+  address_space       = [local.dev_vnet_cidr]
 
   tags = merge(local.common_tags, {
-    env = "stage"
+    env = "dev"
   })
 }
 
-resource "azurerm_subnet" "stage-appgw-tf-subnet" {
-  name                 = "${local.stage_name_prefix}-tf-appgw-subnet"
-  resource_group_name  = azurerm_resource_group.stage.name
-  virtual_network_name = azurerm_virtual_network.stage-tf-vnet.name
-  address_prefixes     = [local.stage_appgw_cidr]
-
-  depends_on = [azurerm_virtual_network.stage-tf-vnet]
+resource "azurerm_subnet" "dev-appgw-tf-subnet" {
+  name                 = "${local.dev_name_prefix}-tf-appgw-subnet"
+  resource_group_name  = azurerm_resource_group.dev.name
+  virtual_network_name = azurerm_virtual_network.dev-tf-vnet.name
+  address_prefixes     = [local.dev_appgw_cidr]
 }
 
-resource "azurerm_subnet" "stage-psql-tf-subnet" {
-  name                 = "${local.stage_name_prefix}-tf-psql-subnet"
-  resource_group_name  = azurerm_resource_group.stage.name
-  virtual_network_name = azurerm_virtual_network.stage-tf-vnet.name
-  address_prefixes     = [local.stage_psql_cidr]
+resource "azurerm_subnet" "dev-psql-tf-subnet" {
+  name                 = "${local.dev_name_prefix}-tf-psql-subnet"
+  resource_group_name  = azurerm_resource_group.dev.name
+  virtual_network_name = azurerm_virtual_network.dev-tf-vnet.name
+  address_prefixes     = [local.dev_psql_cidr]
 
   delegation {
     name = "postgres-flex-delegation"
@@ -37,21 +35,17 @@ resource "azurerm_subnet" "stage-psql-tf-subnet" {
   service_endpoints = [
     "Microsoft.Storage",
   ]
-
-  depends_on = [azurerm_virtual_network.stage-tf-vnet]
 }
 
-resource "azurerm_subnet" "stage-aks-tf-subnet" {
-  name                 = "${local.stage_name_prefix}-tf-aks-subnet"
-  resource_group_name  = azurerm_resource_group.stage.name
-  virtual_network_name = azurerm_virtual_network.stage-tf-vnet.name
-  address_prefixes     = [local.stage_aks_node_cidr]
+resource "azurerm_subnet" "dev-aks-tf-subnet" {
+  name                 = "${local.dev_name_prefix}-tf-aks-subnet"
+  resource_group_name  = azurerm_resource_group.dev.name
+  virtual_network_name = azurerm_virtual_network.dev-tf-vnet.name
+  address_prefixes     = [local.dev_aks_node_cidr]
 
   service_endpoints = [
     "Microsoft.KeyVault",
   ]
-
-  depends_on = [azurerm_virtual_network.stage-tf-vnet]
 }
 
 # /******************************** Prod NETWORK CONFIGURATION **********************************************/
@@ -72,8 +66,6 @@ resource "azurerm_subnet" "prod-appgw-tf-subnet" {
   resource_group_name  = azurerm_resource_group.prod.name
   virtual_network_name = azurerm_virtual_network.prod-tf-vnet.name
   address_prefixes     = [local.prod_appgw_cidr]
-
-  depends_on = [azurerm_virtual_network.prod-tf-vnet]
 }
 
 resource "azurerm_subnet" "prod-psql-tf-subnet" {
@@ -93,8 +85,6 @@ resource "azurerm_subnet" "prod-psql-tf-subnet" {
   service_endpoints = [
     "Microsoft.Storage",
   ]
-
-  depends_on = [azurerm_virtual_network.prod-tf-vnet]
 }
 
 resource "azurerm_subnet" "prod-aks-tf-subnet" {
@@ -106,6 +96,4 @@ resource "azurerm_subnet" "prod-aks-tf-subnet" {
   service_endpoints = [
     "Microsoft.KeyVault",
   ]
-
-  depends_on = [azurerm_virtual_network.prod-tf-vnet]
 }

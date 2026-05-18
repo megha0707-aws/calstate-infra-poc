@@ -1,9 +1,9 @@
-resource "azurerm_resource_group" "stage" {
-  name     = local.stage_resource_group_name
+resource "azurerm_resource_group" "dev" {
+  name     = local.dev_resource_group_name
   location = var.location
 
   tags = merge(local.common_tags, {
-    env = "stage"
+    env = "dev"
   })
 }
 
