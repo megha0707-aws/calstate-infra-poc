@@ -25,6 +25,17 @@ output "configuration_summary" {
         name = azurerm_log_analytics_workspace.dev.name
         id   = azurerm_log_analytics_workspace.dev.id
       }
+      key_vault = {
+        name = data.azurerm_key_vault.dev.name
+        id   = data.azurerm_key_vault.dev.id
+        uri  = data.azurerm_key_vault.dev.vault_uri
+        postgresql_secret_names = {
+          admin_login    = azurerm_key_vault_secret.dev_grouper_postgresql_admin_login.name
+          admin_password = azurerm_key_vault_secret.dev_grouper_postgresql_admin_password.name
+          host           = azurerm_key_vault_secret.dev_grouper_postgresql_host.name
+          database       = azurerm_key_vault_secret.dev_grouper_postgresql_database.name
+        }
+      }
       grouper_postgresql = {
         name             = azurerm_postgresql_flexible_server.dev_grouper.name
         id               = azurerm_postgresql_flexible_server.dev_grouper.id
@@ -60,6 +71,17 @@ output "configuration_summary" {
       log_analytics = {
         name = azurerm_log_analytics_workspace.prod.name
         id   = azurerm_log_analytics_workspace.prod.id
+      }
+      key_vault = {
+        name = data.azurerm_key_vault.prod.name
+        id   = data.azurerm_key_vault.prod.id
+        uri  = data.azurerm_key_vault.prod.vault_uri
+        postgresql_secret_names = {
+          admin_login    = azurerm_key_vault_secret.prod_grouper_postgresql_admin_login.name
+          admin_password = azurerm_key_vault_secret.prod_grouper_postgresql_admin_password.name
+          host           = azurerm_key_vault_secret.prod_grouper_postgresql_host.name
+          database       = azurerm_key_vault_secret.prod_grouper_postgresql_database.name
+        }
       }
       grouper_postgresql = {
         name             = azurerm_postgresql_flexible_server.prod_grouper.name

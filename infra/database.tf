@@ -36,6 +36,7 @@ resource "azurerm_postgresql_flexible_server" "dev_grouper" {
   delegated_subnet_id           = azurerm_subnet.dev-psql-tf-subnet.id
   private_dns_zone_id           = azurerm_private_dns_zone.dev_grouper_postgresql.id
   public_network_access_enabled = false
+  zone                          = "1"
 
   tags = merge(local.common_tags, {
     env = "dev"
@@ -93,6 +94,7 @@ resource "azurerm_postgresql_flexible_server" "prod_grouper" {
   delegated_subnet_id           = azurerm_subnet.prod-psql-tf-subnet.id
   private_dns_zone_id           = azurerm_private_dns_zone.prod_grouper_postgresql.id
   public_network_access_enabled = false
+  zone                          = "1"
 
   tags = merge(local.common_tags, {
     env = "prod"

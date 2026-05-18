@@ -251,3 +251,25 @@ variable "prod_acr_name" {
     error_message = "prod_acr_name must be 5-50 alphanumeric characters when set."
   }
 }
+
+variable "dev_key_vault_name" {
+  description = "Name of the existing manually-created dev Key Vault used for Grouper PostgreSQL secrets."
+  type        = string
+  default     = "kv-dev-grouper"
+
+  validation {
+    condition     = var.dev_key_vault_name == null || can(regex("^[a-zA-Z][a-zA-Z0-9-]{1,22}[a-zA-Z0-9]$", var.dev_key_vault_name))
+    error_message = "dev_key_vault_name must be 3-24 characters, start with a letter, end with a letter or number, and contain only letters, numbers, and hyphens."
+  }
+}
+
+variable "prod_key_vault_name" {
+  description = "Name of the existing manually-created prod Key Vault used for Grouper PostgreSQL secrets."
+  type        = string
+  default     = "kv-prod-grouper"
+
+  validation {
+    condition     = var.prod_key_vault_name == null || can(regex("^[a-zA-Z][a-zA-Z0-9-]{1,22}[a-zA-Z0-9]$", var.prod_key_vault_name))
+    error_message = "prod_key_vault_name must be 3-24 characters, start with a letter, end with a letter or number, and contain only letters, numbers, and hyphens."
+  }
+}

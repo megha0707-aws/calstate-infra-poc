@@ -8,6 +8,7 @@ resource "azurerm_kubernetes_cluster" "dev_aks_cluster" {
 
   automatic_upgrade_channel = "patch"
   private_cluster_enabled   = false
+  oidc_issuer_enabled       = true
   sku_tier                  = var.dev_aks_sku_tier
 
   default_node_pool {
@@ -77,6 +78,7 @@ resource "azurerm_kubernetes_cluster" "prod_aks_cluster" {
   resource_group_name = azurerm_resource_group.prod.name
   dns_prefix          = "${local.prod_name_prefix}-aks"
 
+  oidc_issuer_enabled     = true
   private_cluster_enabled = false
   sku_tier                = var.prod_aks_sku_tier
 
