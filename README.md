@@ -7,7 +7,7 @@ This stack creates two AKS clusters:
 - `prod`
 
 
-This repo is code only; nothing has been deployed from it yet.
+Terraform state is stored remotely in Azure Blob Storage.
 
 Terraform lives in the `infra/` folder. Run Terraform commands from there:
 
@@ -24,13 +24,14 @@ two Terraform-managed resource groups for the application infrastructure:
 
 ```text
 Grouper       Terraform state backend resource group
-Grouper-dev   dev AKS, network, PostgreSQL, ACR, Log Analytics, and NSGs
-Grouper-prod  prod AKS, network, PostgreSQL, ACR, Log Analytics, and NSGs
+Grouper-Dev   dev AKS, network, PostgreSQL, ACR, Log Analytics, and NSGs
+Grouper-Prod  prod AKS, network, PostgreSQL, ACR, Log Analytics, and NSGs
 ```
 
 The `Grouper` backend resource group, the `groupertfstate` storage account, and
 the `terraform` blob container must exist before running `terraform init`.
-Terraform will create `Grouper-dev` and `Grouper-prod` during the initial apply.
+Terraform will create `Grouper-Dev` and `Grouper-Prod` during the initial apply.
+The backend state key is `dcs-apps.tfstate`.
 
 ## Architecture
 
@@ -104,21 +105,21 @@ location         = "westus2"
 deployment_name  = "grouper"
 prefix.dev       = "dev"
 prefix.prod      = "prod"
-dev RG           = "Grouper-dev"
-prod RG          = "Grouper-prod"
+dev RG           = "Grouper-Dev"
+prod RG          = "Grouper-Prod"
 ```
 
 Example names:
 
 ```text
-Grouper-dev
+Grouper-Dev
 grouper-dev-tf-vnet
 grouper-dev-tf-appgw-subnet
 grouper-dev-tf-psql-subnet
 grouper-dev-tf-aks-subnet
 aks-grouper-dev-cluster
 grouper-dev-law-logs
-Grouper-prod
+Grouper-Prod
 aks-grouper-prod-cluster
 ```
 
@@ -187,14 +188,26 @@ resources and stored in Terraform state.
 - Diagnostic settings beyond the Log Analytics workspace
 - Key Vault storage for generated PostgreSQL admin credentials
 
-## Replace Before Planning
+## Review Before Planning
 
-- `infra/backend.tf`: Terraform state backend values, if using a different backend resource group or storage account
-- `infra/variable.tf`: `subscription_id`, if deploying to a different subscription
-- `infra/variable.tf`: `resource_group_name_dev` and `resource_group_name_prod`, if the dev/prod resource group names change
-- `infra/variable.tf`: `authorized_ip_ranges`
-- `infra/variable.tf`: `dev_grouper_postgresql` and `prod_grouper_postgresql` sizing/database defaults
-- `infra/local.tf`: CIDRs, if these defaults are not final
+Before running `terraform plan`, confirm these deployment-specific values:
+
+```text
+backend resource group  = infra/backend.tf
+backend storage account = infra/backend.tf
+backend blob container  = infra/backend.tf
+backend state key       = infra/backend.tf
+subscription_id         = infra/variable.tf
+dev resource group      = infra/variable.tf
+prod resource group     = infra/variable.tf
+authorized IP ranges    = infra/variable.tf
+App Gateway sources     = infra/variable.tf
+```
+
+Review PostgreSQL sizing in `infra/variable.tf` before production use. Review
+CIDRs in `infra/local.tf` and AKS pod/service CIDRs in `infra/variable.tf`
+against campus/on-premises routes, peered VNets, VPN ranges, and other AKS
+clusters before applying.
 
 ## Secrets Note
 

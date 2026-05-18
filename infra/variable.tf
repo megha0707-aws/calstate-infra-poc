@@ -24,7 +24,7 @@ variable "deployment_name" {
 variable "resource_group_name_dev" {
   description = "Optional dev resource group name. Leave null to derive one from deployment_name and prefix.dev."
   type        = string
-  default     = "Grouper-dev"
+  default     = "Grouper-Dev"
 
   validation {
     condition     = var.resource_group_name_dev == null || can(regex("^[A-Za-z0-9._()\\-]{1,90}$", var.resource_group_name_dev))
@@ -35,7 +35,7 @@ variable "resource_group_name_dev" {
 variable "resource_group_name_prod" {
   description = "Optional prod resource group name. Leave null to derive one from deployment_name and prefix.prod."
   type        = string
-  default     = "Grouper-prod"
+  default     = "Grouper-Prod"
 
   validation {
     condition     = var.resource_group_name_prod == null || can(regex("^[A-Za-z0-9._()\\-]{1,90}$", var.resource_group_name_prod))
@@ -67,13 +67,13 @@ variable "prefix" {
 variable "authorized_ip_ranges" {
   description = "CIDRs allowed to access the AKS API servers."
   type        = list(string)
-  default     = ["137.145.0.0/16"]
+  default     = ["137.145.0.0/16", "47.155.238.17/32"]
 }
 
 variable "app_gateway_allowed_source_address_prefixes" {
   description = "Source address prefixes allowed to reach the Application Gateway frontend listeners."
   type        = list(string)
-  default     = ["137.145.0.0/16"]
+  default     = ["137.145.0.0/16", "47.155.238.17/32"]
 }
 
 variable "dev_aks_sku_tier" {
