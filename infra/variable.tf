@@ -1,7 +1,7 @@
 variable "subscription_id" {
   description = "Azure subscription ID for the Grouper AKS deployment."
   type        = string
-  default     = "REPLACE_WITH_SUBSCRIPTION_ID"
+  default     = "f4f3ec7d-9d6f-4752-bdcc-440ed90734fe"
 }
 
 variable "location" {
@@ -24,7 +24,7 @@ variable "deployment_name" {
 variable "resource_group_name_dev" {
   description = "Optional dev resource group name. Leave null to derive one from deployment_name and prefix.dev."
   type        = string
-  default     = null
+  default     = "Grouper-dev"
 
   validation {
     condition     = var.resource_group_name_dev == null || can(regex("^[A-Za-z0-9._()\\-]{1,90}$", var.resource_group_name_dev))
@@ -35,7 +35,7 @@ variable "resource_group_name_dev" {
 variable "resource_group_name_prod" {
   description = "Optional prod resource group name. Leave null to derive one from deployment_name and prefix.prod."
   type        = string
-  default     = null
+  default     = "Grouper-prod"
 
   validation {
     condition     = var.resource_group_name_prod == null || can(regex("^[A-Za-z0-9._()\\-]{1,90}$", var.resource_group_name_prod))
@@ -66,6 +66,12 @@ variable "prefix" {
 
 variable "authorized_ip_ranges" {
   description = "CIDRs allowed to access the AKS API servers."
+  type        = list(string)
+  default     = ["137.145.0.0/16"]
+}
+
+variable "app_gateway_allowed_source_address_prefixes" {
+  description = "Source address prefixes allowed to reach the Application Gateway frontend listeners."
   type        = list(string)
   default     = ["137.145.0.0/16"]
 }
@@ -128,7 +134,7 @@ variable "prod_default_node_pool" {
   default = {
     name                          = "default"
     vm_size                       = "Standard_D2ads_v5"
-    node_count                    = 2
+    node_count                    = 3
     node_public_ip_enabled        = false
     drain_timeout_in_minutes      = 0
     max_surge                     = "10%"
@@ -152,7 +158,7 @@ variable "dev_network_profile" {
     network_plugin_mode = "overlay"
     network_data_plane  = "cilium"
     network_policy      = "cilium"
-    pod_cidr            = "10.239.12.0/21"
+    pod_cidr            = "10.239.64.0/21"
     service_cidr        = "10.239.11.0/24"
     dns_service_ip      = "10.239.11.10"
   }
@@ -174,7 +180,7 @@ variable "prod_network_profile" {
     network_plugin_mode = "overlay"
     network_data_plane  = "cilium"
     network_policy      = "cilium"
-    pod_cidr            = "10.239.24.0/21"
+    pod_cidr            = "10.239.72.0/21"
     service_cidr        = "10.239.21.0/24"
     dns_service_ip      = "10.239.21.10"
   }

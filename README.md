@@ -17,6 +17,21 @@ terraform init
 terraform plan
 ```
 
+## Resource Groups
+
+This stack uses one manually bootstrapped resource group for Terraform state and
+two Terraform-managed resource groups for the application infrastructure:
+
+```text
+Grouper       Terraform state backend resource group
+Grouper-dev   dev AKS, network, PostgreSQL, ACR, Log Analytics, and NSGs
+Grouper-prod  prod AKS, network, PostgreSQL, ACR, Log Analytics, and NSGs
+```
+
+The `Grouper` backend resource group, the `groupertfstate` storage account, and
+the `terraform` blob container must exist before running `terraform init`.
+Terraform will create `Grouper-dev` and `Grouper-prod` during the initial apply.
+
 ## Architecture
 
 This template prepares the Azure foundation for Grouper:
@@ -35,6 +50,7 @@ This template prepares the Azure foundation for Grouper:
 - Log Analytics workspaces
 - Azure Container Registries
 - `AcrPull` role assignments from AKS to ACR
+- Network security groups for Application Gateway and PostgreSQL subnets
 
 ## Network Defaults
 
@@ -43,14 +59,14 @@ dev VNet        = 10.239.10.0/24   Azure network for dev resources
 dev AppGW       = 10.239.10.0/26   Dedicated Application Gateway subnet
 dev PostgreSQL  = 10.239.10.64/27  Delegated PostgreSQL Flexible Server subnet
 dev AKS nodes   = 10.239.10.96/27  AKS node subnet
-dev pods        = 10.239.12.0/21  AKS overlay pod IP range, not an Azure subnet
+dev pods        = 10.239.64.0/21  AKS overlay pod IP range, not an Azure subnet
 dev services    = 10.239.11.0/24  Kubernetes ClusterIP service range, not an Azure subnet
 
 prod VNet       = 10.239.20.0/24   Azure network for prod resources
 prod AppGW      = 10.239.20.0/26   Dedicated Application Gateway subnet
 prod PostgreSQL = 10.239.20.64/27  Delegated PostgreSQL Flexible Server subnet
 prod AKS nodes  = 10.239.20.96/27  AKS node subnet
-prod pods       = 10.239.24.0/21  AKS overlay pod IP range, not an Azure subnet
+prod pods       = 10.239.72.0/21  AKS overlay pod IP range, not an Azure subnet
 prod services   = 10.239.21.0/24  Kubernetes ClusterIP service range, not an Azure subnet
 ```
 
@@ -88,18 +104,22 @@ location         = "westus2"
 deployment_name  = "grouper"
 prefix.dev       = "dev"
 prefix.prod      = "prod"
+dev RG           = "Grouper-dev"
+prod RG          = "Grouper-prod"
 ```
 
 Example names:
 
 ```text
-rg-grouper-dev
+Grouper-dev
 grouper-dev-tf-vnet
 grouper-dev-tf-appgw-subnet
 grouper-dev-tf-psql-subnet
 grouper-dev-tf-aks-subnet
 aks-grouper-dev-cluster
 grouper-dev-law-logs
+Grouper-prod
+aks-grouper-prod-cluster
 ```
 
 ACR names cannot contain hyphens and must be globally unique, so they are
@@ -108,14 +128,41 @@ is set.
 
 ## Kubernetes Resources
 
-This Terraform stack does not manage Kubernetes namespaces, deployments,
-services, ingress objects, or NetworkPolicy resources. Those should be delivered
-later by the application deployment workflow, such as Helm, Argo CD, or another
-GitOps pipeline.
+This Terraform stack does not directly apply Kubernetes namespaces,
+deployments, services, ingress objects, or NetworkPolicy resources. Those should
+be delivered later by the application deployment workflow, such as Helm, Argo CD,
+or another GitOps pipeline.
 
 Because each AKS cluster is dedicated to Grouper, Grouper workloads can run in
 the cluster's regular application namespace strategy without this infrastructure
 stack creating a separate namespace.
+
+## Network Security
+
+The stack creates baseline subnet NSGs for each environment:
+
+```text
+Application Gateway subnet:
+  allow inbound TCP 80/443 from app_gateway_allowed_source_address_prefixes
+  allow inbound TCP 65200-65535 from GatewayManager for Application Gateway v2
+  allow AzureLoadBalancer health traffic
+  deny other inbound traffic
+
+PostgreSQL subnet:
+  allow inbound TCP 5432 from the environment AKS node subnet
+  deny other inbound traffic from the VNet
+```
+
+AKS pod-level microsegmentation is expected to use Kubernetes NetworkPolicy or
+CiliumNetworkPolicy resources delivered by the application/GitOps workflow. The
+AKS clusters are already configured with Azure CNI Overlay and Cilium network
+policy support.
+
+NSGs are intentionally used only for coarse subnet boundaries. Avoid adding
+strict deny rules to the AKS node subnet until AKS egress is designed with Azure
+Firewall or another explicit egress path. AKS node bootstrap, upgrades, image
+pulls, control-plane traffic, and Cilium pod networking all depend on required
+platform flows that are easier to break than to secure with ad hoc NSG denies.
 
 ## Grouper Database
 
@@ -142,8 +189,9 @@ resources and stored in Terraform state.
 
 ## Replace Before Planning
 
-- `infra/backend.tf`: Terraform state backend values
-- `infra/variable.tf`: `subscription_id`
+- `infra/backend.tf`: Terraform state backend values, if using a different backend resource group or storage account
+- `infra/variable.tf`: `subscription_id`, if deploying to a different subscription
+- `infra/variable.tf`: `resource_group_name_dev` and `resource_group_name_prod`, if the dev/prod resource group names change
 - `infra/variable.tf`: `authorized_ip_ranges`
 - `infra/variable.tf`: `dev_grouper_postgresql` and `prod_grouper_postgresql` sizing/database defaults
 - `infra/local.tf`: CIDRs, if these defaults are not final
