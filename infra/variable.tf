@@ -152,9 +152,9 @@ variable "dev_network_profile" {
     network_plugin_mode = "overlay"
     network_data_plane  = "cilium"
     network_policy      = "cilium"
-    pod_cidr            = "10.22.0.0/21"
-    service_cidr        = "10.21.0.0/24"
-    dns_service_ip      = "10.21.0.10"
+    pod_cidr            = "10.239.12.0/21"
+    service_cidr        = "10.239.11.0/24"
+    dns_service_ip      = "10.239.11.10"
   }
 }
 
@@ -174,9 +174,9 @@ variable "prod_network_profile" {
     network_plugin_mode = "overlay"
     network_data_plane  = "cilium"
     network_policy      = "cilium"
-    pod_cidr            = "10.32.0.0/21"
-    service_cidr        = "10.31.0.0/24"
-    dns_service_ip      = "10.31.0.10"
+    pod_cidr            = "10.239.24.0/21"
+    service_cidr        = "10.239.21.0/24"
+    dns_service_ip      = "10.239.21.10"
   }
 }
 

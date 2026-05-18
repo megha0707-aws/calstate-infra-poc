@@ -39,25 +39,36 @@ This template prepares the Azure foundation for Grouper:
 ## Network Defaults
 
 ```text
-dev VNet        = 172.28.10.0/24   Azure network for dev resources
-dev AppGW       = 172.28.10.0/26   Dedicated Application Gateway subnet
-dev PostgreSQL  = 172.28.10.64/27  Delegated PostgreSQL Flexible Server subnet
-dev AKS nodes   = 172.28.10.96/27  AKS node subnet
-dev pods        = 10.22.0.0/21   AKS overlay pod IP range
-dev services    = 10.21.0.0/24   Kubernetes ClusterIP service range
+dev VNet        = 10.239.10.0/24   Azure network for dev resources
+dev AppGW       = 10.239.10.0/26   Dedicated Application Gateway subnet
+dev PostgreSQL  = 10.239.10.64/27  Delegated PostgreSQL Flexible Server subnet
+dev AKS nodes   = 10.239.10.96/27  AKS node subnet
+dev pods        = 10.239.12.0/21  AKS overlay pod IP range, not an Azure subnet
+dev services    = 10.239.11.0/24  Kubernetes ClusterIP service range, not an Azure subnet
 
-prod VNet       = 172.28.20.0/24   Azure network for prod resources
-prod AppGW      = 172.28.20.0/26   Dedicated Application Gateway subnet
-prod PostgreSQL = 172.28.20.64/27  Delegated PostgreSQL Flexible Server subnet
-prod AKS nodes  = 172.28.20.96/27  AKS node subnet
-prod pods       = 10.32.0.0/21   AKS overlay pod IP range
-prod services   = 10.31.0.0/24   Kubernetes ClusterIP service range
+prod VNet       = 10.239.20.0/24   Azure network for prod resources
+prod AppGW      = 10.239.20.0/26   Dedicated Application Gateway subnet
+prod PostgreSQL = 10.239.20.64/27  Delegated PostgreSQL Flexible Server subnet
+prod AKS nodes  = 10.239.20.96/27  AKS node subnet
+prod pods       = 10.239.24.0/21  AKS overlay pod IP range, not an Azure subnet
+prod services   = 10.239.21.0/24  Kubernetes ClusterIP service range, not an Azure subnet
 ```
 
 AKS uses Azure CNI Overlay, so pod IPs come from the overlay pod CIDRs, not from
 the AKS node subnets. Each `/21` overlay pod range leaves room for up to eight
 AKS nodes because Azure CNI Overlay allocates pod space to nodes in `/24`
 blocks.
+
+Pod and service CIDRs are configured on the AKS clusters but are not created as
+Azure VNet subnets. They must still be unique and non-overlapping with the Azure
+VNet ranges, on-premises/campus routes, VPN client ranges, peered VNets, and any
+network endpoints that Grouper pods need to reach. The Kubernetes DNS service IP
+is allocated from the corresponding service CIDR:
+
+```text
+dev DNS service IP  = 10.239.11.10
+prod DNS service IP = 10.239.21.10
+```
 
 The Application Gateway subnets remain `/26` because Azure recommends `/26` as
 the minimum Application Gateway subnet size. The PostgreSQL delegated subnets
