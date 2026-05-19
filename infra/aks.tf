@@ -6,10 +6,9 @@ resource "azurerm_kubernetes_cluster" "dev_aks_cluster" {
   resource_group_name = azurerm_resource_group.dev.name
   dns_prefix          = "${local.dev_name_prefix}-aks"
 
-  automatic_upgrade_channel = "patch"
-  private_cluster_enabled   = false
-  oidc_issuer_enabled       = true
-  sku_tier                  = var.dev_aks_sku_tier
+  private_cluster_enabled = false
+  oidc_issuer_enabled     = true
+  sku_tier                = var.dev_aks_sku_tier
 
   default_node_pool {
     name                   = var.dev_default_node_pool.name

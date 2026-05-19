@@ -66,6 +66,10 @@ ACR names are generated with stable random suffixes unless `dev_acr_name` or
 
 ## Network
 
+Each environment has its own VNet and non-overlapping AKS pod/service ranges.
+The VNet contains only Azure-routable subnets. AKS pod and service CIDRs are
+configured on the cluster, but they are not Azure subnets.
+
 ```text
 dev VNet        = 10.239.10.0/24
 dev AppGW       = 10.239.10.0/26
@@ -80,6 +84,38 @@ prod PostgreSQL = 10.239.20.64/27
 prod AKS nodes  = 10.239.20.96/27
 prod services   = 10.239.21.0/24
 prod pods       = 10.239.72.0/21
+```
+
+Network purpose:
+
+```text
+VNet
+  Main Azure network boundary for the environment. Azure subnets for AppGW,
+  PostgreSQL, and AKS nodes are carved from this range.
+
+Application Gateway subnet
+  Reserved for a future Azure Application Gateway. The actual Application
+  Gateway resource is not configured yet, but the subnet and NSG are ready.
+  This subnet stays dedicated to Application Gateway.
+
+PostgreSQL subnet
+  Delegated to Microsoft.DBforPostgreSQL/flexibleServers. PostgreSQL Flexible
+  Server uses this subnet for private VNet access. Public PostgreSQL access is
+  disabled.
+
+AKS node subnet
+  Used by AKS node VMSS instances. Nodes receive IPs from this subnet. The
+  subnet has a Microsoft.KeyVault service endpoint for future Key Vault access
+  from AKS workloads or add-ons.
+
+Kubernetes service CIDR
+  Internal ClusterIP service range used only inside Kubernetes. This is not an
+  Azure VNet subnet and should not overlap with any reachable network.
+
+AKS pod CIDR
+  Azure CNI Overlay pod address space. Pods receive overlay IPs from this range.
+  This is not an Azure VNet subnet and should not overlap with any reachable
+  network.
 ```
 
 AKS uses Azure CNI Overlay, so pod CIDRs are not Azure VNet subnets. Each `/21`
