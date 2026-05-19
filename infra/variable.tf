@@ -253,7 +253,7 @@ variable "prod_acr_name" {
 }
 
 variable "dev_key_vault_name" {
-  description = "Name of the existing manually-created dev Key Vault used for Grouper PostgreSQL secrets."
+  description = "Name of the existing manually-managed dev Key Vault used for Grouper PostgreSQL secrets."
   type        = string
   default     = "kv-dev-grouper"
 
@@ -264,7 +264,7 @@ variable "dev_key_vault_name" {
 }
 
 variable "prod_key_vault_name" {
-  description = "Name of the existing manually-created prod Key Vault used for Grouper PostgreSQL secrets."
+  description = "Name of the existing manually-managed prod Key Vault used for Grouper PostgreSQL secrets."
   type        = string
   default     = "kv-prod-grouper"
 

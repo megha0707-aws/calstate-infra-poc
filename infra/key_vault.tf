@@ -1,4 +1,4 @@
-# Key Vaults are created manually and referenced here so Terraform can write
+# Key Vaults are managed manually and referenced here so Terraform can write
 # the generated PostgreSQL connection details as secrets.
 
 data "azurerm_key_vault" "dev" {
