@@ -44,6 +44,11 @@ resource "azurerm_kubernetes_cluster" "dev_aks_cluster" {
     secret_rotation_enabled = true
   }
 
+  monitor_metrics {
+    annotations_allowed = null
+    labels_allowed      = null
+  }
+
   # Container Insights is intentionally disabled by default to avoid unexpected
   # Log Analytics ingestion cost. Uncomment when the environment is ready.
   # oms_agent {
@@ -54,6 +59,8 @@ resource "azurerm_kubernetes_cluster" "dev_aks_cluster" {
   identity {
     type = "SystemAssigned"
   }
+
+  tags = local.dev_tags
 
   lifecycle {
     ignore_changes = [
@@ -116,6 +123,11 @@ resource "azurerm_kubernetes_cluster" "prod_aks_cluster" {
     secret_rotation_enabled = true
   }
 
+  monitor_metrics {
+    annotations_allowed = null
+    labels_allowed      = null
+  }
+
   # Container Insights is intentionally disabled by default to avoid unexpected
   # Log Analytics ingestion cost. Uncomment when the environment is ready.
   # oms_agent {
@@ -126,6 +138,8 @@ resource "azurerm_kubernetes_cluster" "prod_aks_cluster" {
   identity {
     type = "SystemAssigned"
   }
+
+  tags = local.prod_tags
 
   lifecycle {
     ignore_changes = [

@@ -5,9 +5,7 @@ resource "azurerm_log_analytics_workspace" "dev" {
   sku                 = "PerGB2018"
   retention_in_days   = 30
 
-  tags = merge(local.common_tags, {
-    env = "dev"
-  })
+  tags = local.dev_tags
 }
 
 resource "azurerm_log_analytics_workspace" "prod" {
@@ -17,7 +15,5 @@ resource "azurerm_log_analytics_workspace" "prod" {
   sku                 = "PerGB2018"
   retention_in_days   = 30
 
-  tags = merge(local.common_tags, {
-    env = "prod"
-  })
+  tags = local.prod_tags
 }

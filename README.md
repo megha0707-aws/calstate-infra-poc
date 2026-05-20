@@ -15,6 +15,8 @@ This stack currently manages:
 - AKS clusters using Azure CNI Overlay and Cilium.
 - Azure Container Registries with AKS `AcrPull` role assignments.
 - Log Analytics workspaces.
+- Azure Monitor workspaces, Managed Prometheus collection, and Azure Managed
+  Grafana instances for dev and prod.
 - PostgreSQL connection secrets written to manually managed Key Vaults.
 
 ## Intentional Gaps
@@ -29,7 +31,8 @@ be added later or managed by a separate application/GitOps workflow:
 - Application Insights.
 - Workload identities.
 - Kubernetes manifests, ingress objects, Argo CD bootstrap, or NetworkPolicies.
-- AKS diagnostic settings beyond the Log Analytics workspace.
+- AKS diagnostic settings and Container Insights log collection beyond the
+  existing Log Analytics workspaces.
 
 ## Environment Summary
 
@@ -47,8 +50,16 @@ dev Key Vault    = kv-dev-grouper
 prod Key Vault   = kv-prod-grouper
 ```
 
-ACR names are generated with stable random suffixes unless `dev_acr_name` or
-`prod_acr_name` is set.
+ACR names are fixed and must be globally unique across Azure:
+
+```text
+dev ACR  = csugrouperdevacr
+prod ACR = csugrouperprodacr
+```
+
+ACR names are immutable. Changing `dev_acr_name` or `prod_acr_name` later will
+replace the registry, so copy or repush required images before applying an ACR
+rename.
 
 ## Terraform State
 
@@ -72,6 +83,47 @@ state key       = dcs-apps.tfstate
 
 Treat the backend as sensitive. Terraform state includes generated PostgreSQL
 admin passwords because Terraform manages the Key Vault secret resources.
+
+## Tags And Cost Tracking
+
+Terraform applies a consistent tag set to resources that support Azure tags:
+
+```text
+ManagedBy    = Terraform
+Project      = grouper
+App          = grouper
+env          = dev | prod
+Environment  = dev | prod
+Workload     = Grouper-Dev | Grouper-Prod
+```
+
+Use `Workload` for environment-level grouping across inventory, operations,
+policy, and cost views:
+
+```text
+Workload = Grouper-Dev   dev Grouper environment
+Workload = Grouper-Prod  prod Grouper environment
+```
+
+The `Workload` value intentionally matches the primary environment resource
+group name so reports can group related resources across multiple Azure resource
+groups without using a cost-specific tag name. If CSU later provides an official
+finance/accounting code, add a separate `CostCenter` tag for that value.
+
+AKS and Azure Monitor create Azure-managed support resource groups:
+
+```text
+MC_Grouper-Dev_aks-grouper-dev-cluster_westus2
+MC_Grouper-Prod_aks-grouper-prod-cluster_westus2
+MA_grouper-dev-monitoring-workspace_westus2_managed
+MA_grouper-prod-monitoring-workspace_westus2_managed
+```
+
+Those managed groups contain infrastructure such as AKS node VM scale sets,
+disks, load balancers, public IPs, and Managed Prometheus backend resources.
+Do not delete or manually restructure them. In Cost Management, include both
+the `Workload` tag and the related `MC_*` / `MA_*` managed resource groups
+when validating full dev or prod cost.
 
 ## Network Design
 
@@ -284,6 +336,43 @@ services containers.
 
 Container Insights is not enabled yet; the `oms_agent` blocks are intentionally
 commented out in `infra/aks.tf`.
+
+## Monitoring And Grafana
+
+The monitoring stack follows the Azure Managed Prometheus and Azure Managed
+Grafana pattern used in `calstate-co/calstate-ai-tf-infra`, scoped to this
+repo's `dev` and `prod` environments.
+
+Each environment gets:
+
+```text
+Azure Monitor workspace
+Data collection endpoint
+Data collection rule for Microsoft-PrometheusMetrics
+Data collection rule association to the AKS cluster
+Data collection endpoint association to the AKS cluster
+Azure Managed Grafana instance
+Monitoring Reader role assignment for Grafana on the Monitor workspace
+```
+
+AKS Managed Prometheus is enabled with the `monitor_metrics` block on both AKS
+clusters. Azure Managed Grafana is integrated directly with the environment's
+Azure Monitor workspace.
+
+Current monitoring resources:
+
+```text
+dev Monitor workspace  = grouper-dev-monitoring-workspace
+dev Grafana            = grouper-dev-grafana
+
+prod Monitor workspace = grouper-prod-monitoring-workspace
+prod Grafana           = grouper-prod-grafana
+```
+
+This enables Kubernetes metrics collection for Grafana without turning on
+Container Insights log ingestion. Log Analytics workspaces still exist for each
+environment, but the `oms_agent` blocks remain commented out to avoid unexpected
+Log Analytics ingestion cost.
 
 ## PostgreSQL And Key Vault
 

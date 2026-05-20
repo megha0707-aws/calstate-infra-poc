@@ -245,24 +245,24 @@ variable "prod_grouper_postgresql" {
 }
 
 variable "dev_acr_name" {
-  description = "Optional globally unique Azure Container Registry name for dev. Leave null to generate one with a stable random suffix."
+  description = "Globally unique Azure Container Registry name for dev."
   type        = string
-  default     = null
+  default     = "csugrouperdevacr"
 
   validation {
-    condition     = var.dev_acr_name == null || can(regex("^[a-zA-Z0-9]{5,50}$", var.dev_acr_name))
-    error_message = "dev_acr_name must be 5-50 alphanumeric characters when set."
+    condition     = can(regex("^[a-zA-Z0-9]{5,50}$", var.dev_acr_name))
+    error_message = "dev_acr_name must be 5-50 alphanumeric characters."
   }
 }
 
 variable "prod_acr_name" {
-  description = "Optional globally unique Azure Container Registry name for prod. Leave null to generate one with a stable random suffix."
+  description = "Globally unique Azure Container Registry name for prod."
   type        = string
-  default     = null
+  default     = "csugrouperprodacr"
 
   validation {
-    condition     = var.prod_acr_name == null || can(regex("^[a-zA-Z0-9]{5,50}$", var.prod_acr_name))
-    error_message = "prod_acr_name must be 5-50 alphanumeric characters when set."
+    condition     = can(regex("^[a-zA-Z0-9]{5,50}$", var.prod_acr_name))
+    error_message = "prod_acr_name must be 5-50 alphanumeric characters."
   }
 }
 

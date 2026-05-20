@@ -4,9 +4,7 @@ resource "azurerm_private_dns_zone" "dev_grouper_postgresql" {
   name                = "${local.dev_name_prefix}.postgres.database.azure.com"
   resource_group_name = azurerm_resource_group.dev.name
 
-  tags = merge(local.common_tags, {
-    env = "dev"
-  })
+  tags = local.dev_tags
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "dev_grouper_postgresql" {
@@ -16,9 +14,7 @@ resource "azurerm_private_dns_zone_virtual_network_link" "dev_grouper_postgresql
   virtual_network_id    = azurerm_virtual_network.dev-tf-vnet.id
   registration_enabled  = false
 
-  tags = merge(local.common_tags, {
-    env = "dev"
-  })
+  tags = local.dev_tags
 }
 
 resource "azurerm_postgresql_flexible_server" "dev_grouper" {
@@ -38,9 +34,7 @@ resource "azurerm_postgresql_flexible_server" "dev_grouper" {
   public_network_access_enabled = false
   zone                          = "1"
 
-  tags = merge(local.common_tags, {
-    env = "dev"
-  })
+  tags = local.dev_tags
 
   depends_on = [azurerm_private_dns_zone_virtual_network_link.dev_grouper_postgresql]
 }
@@ -62,9 +56,7 @@ resource "azurerm_private_dns_zone" "prod_grouper_postgresql" {
   name                = "${local.prod_name_prefix}.postgres.database.azure.com"
   resource_group_name = azurerm_resource_group.prod.name
 
-  tags = merge(local.common_tags, {
-    env = "prod"
-  })
+  tags = local.prod_tags
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "prod_grouper_postgresql" {
@@ -74,9 +66,7 @@ resource "azurerm_private_dns_zone_virtual_network_link" "prod_grouper_postgresq
   virtual_network_id    = azurerm_virtual_network.prod-tf-vnet.id
   registration_enabled  = false
 
-  tags = merge(local.common_tags, {
-    env = "prod"
-  })
+  tags = local.prod_tags
 }
 
 resource "azurerm_postgresql_flexible_server" "prod_grouper" {
@@ -96,9 +86,7 @@ resource "azurerm_postgresql_flexible_server" "prod_grouper" {
   public_network_access_enabled = false
   zone                          = "1"
 
-  tags = merge(local.common_tags, {
-    env = "prod"
-  })
+  tags = local.prod_tags
 
   depends_on = [azurerm_private_dns_zone_virtual_network_link.prod_grouper_postgresql]
 }

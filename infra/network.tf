@@ -6,9 +6,7 @@ resource "azurerm_virtual_network" "dev-tf-vnet" {
   resource_group_name = azurerm_resource_group.dev.name
   address_space       = [local.dev_vnet_cidr, local.dev_appgw_cidr]
 
-  tags = merge(local.common_tags, {
-    env = "dev"
-  })
+  tags = local.dev_tags
 }
 
 resource "azurerm_subnet" "dev-appgw-tf-subnet" {
@@ -56,9 +54,7 @@ resource "azurerm_virtual_network" "prod-tf-vnet" {
   resource_group_name = azurerm_resource_group.prod.name
   address_space       = [local.prod_vnet_cidr, local.prod_appgw_cidr]
 
-  tags = merge(local.common_tags, {
-    env = "prod"
-  })
+  tags = local.prod_tags
 }
 
 resource "azurerm_subnet" "prod-appgw-tf-subnet" {

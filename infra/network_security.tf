@@ -5,9 +5,7 @@ resource "azurerm_network_security_group" "dev_appgw" {
   location            = azurerm_resource_group.dev.location
   resource_group_name = azurerm_resource_group.dev.name
 
-  tags = merge(local.common_tags, {
-    env = "dev"
-  })
+  tags = local.dev_tags
 }
 
 resource "azurerm_network_security_rule" "dev_appgw_frontend_inbound" {
@@ -76,9 +74,7 @@ resource "azurerm_network_security_group" "dev_psql" {
   location            = azurerm_resource_group.dev.location
   resource_group_name = azurerm_resource_group.dev.name
 
-  tags = merge(local.common_tags, {
-    env = "dev"
-  })
+  tags = local.dev_tags
 }
 
 resource "azurerm_network_security_rule" "dev_psql_from_aks_inbound" {
@@ -135,9 +131,7 @@ resource "azurerm_network_security_group" "prod_appgw" {
   location            = azurerm_resource_group.prod.location
   resource_group_name = azurerm_resource_group.prod.name
 
-  tags = merge(local.common_tags, {
-    env = "prod"
-  })
+  tags = local.prod_tags
 }
 
 resource "azurerm_network_security_rule" "prod_appgw_frontend_inbound" {
@@ -206,9 +200,7 @@ resource "azurerm_network_security_group" "prod_psql" {
   location            = azurerm_resource_group.prod.location
   resource_group_name = azurerm_resource_group.prod.name
 
-  tags = merge(local.common_tags, {
-    env = "prod"
-  })
+  tags = local.prod_tags
 }
 
 resource "azurerm_network_security_rule" "prod_psql_from_aks_inbound" {

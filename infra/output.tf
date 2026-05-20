@@ -25,6 +25,13 @@ output "configuration_summary" {
         name = azurerm_log_analytics_workspace.dev.name
         id   = azurerm_log_analytics_workspace.dev.id
       }
+      monitoring = {
+        monitor_workspace_id        = azurerm_monitor_workspace.dev.id
+        data_collection_endpoint_id = azurerm_monitor_data_collection_endpoint.dev.id
+        data_collection_rule_id     = azurerm_monitor_data_collection_rule.dev_dcr.id
+        grafana_id                  = azurerm_dashboard_grafana.dev.id
+        grafana_endpoint            = azurerm_dashboard_grafana.dev.endpoint
+      }
       key_vault = {
         name = data.azurerm_key_vault.dev.name
         id   = data.azurerm_key_vault.dev.id
@@ -71,6 +78,13 @@ output "configuration_summary" {
       log_analytics = {
         name = azurerm_log_analytics_workspace.prod.name
         id   = azurerm_log_analytics_workspace.prod.id
+      }
+      monitoring = {
+        monitor_workspace_id        = azurerm_monitor_workspace.prod.id
+        data_collection_endpoint_id = azurerm_monitor_data_collection_endpoint.prod.id
+        data_collection_rule_id     = azurerm_monitor_data_collection_rule.prod_dcr.id
+        grafana_id                  = azurerm_dashboard_grafana.prod.id
+        grafana_endpoint            = azurerm_dashboard_grafana.prod.endpoint
       }
       key_vault = {
         name = data.azurerm_key_vault.prod.name

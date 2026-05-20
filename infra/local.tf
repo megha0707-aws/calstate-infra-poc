@@ -5,8 +5,8 @@ locals {
   dev_resource_group_name  = coalesce(var.resource_group_name_dev, "rg-${local.dev_name_prefix}")
   prod_resource_group_name = coalesce(var.resource_group_name_prod, "rg-${local.prod_name_prefix}")
 
-  dev_acr_name  = coalesce(var.dev_acr_name, "${substr(replace(local.dev_name_prefix, "-", ""), 0, 41)}acr${random_string.dev_acr_suffix.result}")
-  prod_acr_name = coalesce(var.prod_acr_name, "${substr(replace(local.prod_name_prefix, "-", ""), 0, 41)}acr${random_string.prod_acr_suffix.result}")
+  dev_acr_name  = var.dev_acr_name
+  prod_acr_name = var.prod_acr_name
 
   dev_vnet_cidr     = "10.239.10.0/24"
   dev_appgw_cidr    = "10.239.12.0/24"
@@ -29,4 +29,16 @@ locals {
     Project   = var.deployment_name
     App       = "grouper"
   }
+
+  dev_tags = merge(local.common_tags, {
+    env         = "dev"
+    Environment = "dev"
+    Workload    = local.dev_resource_group_name
+  })
+
+  prod_tags = merge(local.common_tags, {
+    env         = "prod"
+    Environment = "prod"
+    Workload    = local.prod_resource_group_name
+  })
 }

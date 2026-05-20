@@ -5,9 +5,7 @@ resource "azurerm_container_registry" "dev" {
   sku                 = "Basic"
   admin_enabled       = false
 
-  tags = merge(local.common_tags, {
-    env = "dev"
-  })
+  tags = local.dev_tags
 }
 
 resource "azurerm_container_registry" "prod" {
@@ -17,7 +15,5 @@ resource "azurerm_container_registry" "prod" {
   sku                 = "Basic"
   admin_enabled       = false
 
-  tags = merge(local.common_tags, {
-    env = "prod"
-  })
+  tags = local.prod_tags
 }
