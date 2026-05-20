@@ -4,7 +4,7 @@ resource "azurerm_virtual_network" "dev-tf-vnet" {
   name                = "${local.dev_name_prefix}-tf-vnet"
   location            = azurerm_resource_group.dev.location
   resource_group_name = azurerm_resource_group.dev.name
-  address_space       = [local.dev_vnet_cidr]
+  address_space       = [local.dev_vnet_cidr, local.dev_appgw_cidr]
 
   tags = merge(local.common_tags, {
     env = "dev"
@@ -54,7 +54,7 @@ resource "azurerm_virtual_network" "prod-tf-vnet" {
   name                = "${local.prod_name_prefix}-tf-vnet"
   location            = azurerm_resource_group.prod.location
   resource_group_name = azurerm_resource_group.prod.name
-  address_space       = [local.prod_vnet_cidr]
+  address_space       = [local.prod_vnet_cidr, local.prod_appgw_cidr]
 
   tags = merge(local.common_tags, {
     env = "prod"

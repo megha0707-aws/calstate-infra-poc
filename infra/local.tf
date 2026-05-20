@@ -9,12 +9,12 @@ locals {
   prod_acr_name = coalesce(var.prod_acr_name, "${substr(replace(local.prod_name_prefix, "-", ""), 0, 41)}acr${random_string.prod_acr_suffix.result}")
 
   dev_vnet_cidr     = "10.239.10.0/24"
-  dev_appgw_cidr    = "10.239.10.0/26"
+  dev_appgw_cidr    = "10.239.12.0/24"
   dev_psql_cidr     = "10.239.10.64/27"
   dev_aks_node_cidr = "10.239.10.96/27"
 
   prod_vnet_cidr     = "10.239.20.0/24"
-  prod_appgw_cidr    = "10.239.20.0/26"
+  prod_appgw_cidr    = "10.239.22.0/24"
   prod_psql_cidr     = "10.239.20.64/27"
   prod_aks_node_cidr = "10.239.20.96/27"
 

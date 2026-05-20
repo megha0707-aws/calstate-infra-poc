@@ -80,19 +80,19 @@ The VNet contains only Azure-routable subnets. AKS pod and service CIDRs are
 configured on the cluster, but they are not Azure subnets.
 
 ```text
-dev VNet        = 10.239.10.0/24
-dev AppGW       = 10.239.10.0/26
-dev PostgreSQL  = 10.239.10.64/27
-dev AKS nodes   = 10.239.10.96/27
-dev services    = 10.239.11.0/24
-dev pods        = 10.239.64.0/21
+dev VNet address spaces  = 10.239.10.0/24, 10.239.12.0/24
+dev AppGW subnet         = 10.239.12.0/24
+dev PostgreSQL subnet    = 10.239.10.64/27
+dev AKS node subnet      = 10.239.10.96/27
+dev services             = 10.239.11.0/24
+dev pods                 = 10.239.64.0/21
 
-prod VNet       = 10.239.20.0/24
-prod AppGW      = 10.239.20.0/26
-prod PostgreSQL = 10.239.20.64/27
-prod AKS nodes  = 10.239.20.96/27
-prod services   = 10.239.21.0/24
-prod pods       = 10.239.72.0/21
+prod VNet address spaces = 10.239.20.0/24, 10.239.22.0/24
+prod AppGW subnet        = 10.239.22.0/24
+prod PostgreSQL subnet   = 10.239.20.64/27
+prod AKS node subnet     = 10.239.20.96/27
+prod services            = 10.239.21.0/24
+prod pods                = 10.239.72.0/21
 ```
 
 ### Subnet Purpose
@@ -102,6 +102,12 @@ Application Gateway subnet
   Reserved for a future Azure Application Gateway. The actual Application
   Gateway resource is not configured yet, but the subnet and NSG are ready.
   This subnet stays dedicated to Application Gateway.
+
+  The original architecture diagram showed an App Gateway subnet size of /26.
+  This repo intentionally uses /24 instead because Azure recommends /24 for
+  Application Gateway v2 and WAF_v2 subnets to provide autoscale and maintenance
+  headroom. The AppGW /24 is added as a separate VNet address space so it does
+  not overlap the existing AKS node, PostgreSQL, service, or pod ranges.
 
 PostgreSQL subnet
   Delegated to Microsoft.DBforPostgreSQL/flexibleServers. PostgreSQL Flexible
