@@ -105,15 +105,17 @@ variable "dev_default_node_pool" {
     vm_size                       = string
     node_count                    = number
     node_public_ip_enabled        = bool
+    temporary_name_for_rotation   = string
     drain_timeout_in_minutes      = number
     max_surge                     = string
     node_soak_duration_in_minutes = number
   })
   default = {
     name                          = "default"
-    vm_size                       = "Standard_D2ads_v5"
+    vm_size                       = "Standard_D4ads_v5"
     node_count                    = 1
     node_public_ip_enabled        = false
+    temporary_name_for_rotation   = "tmpdev"
     drain_timeout_in_minutes      = 0
     max_surge                     = "10%"
     node_soak_duration_in_minutes = 0
@@ -127,15 +129,17 @@ variable "prod_default_node_pool" {
     vm_size                       = string
     node_count                    = number
     node_public_ip_enabled        = bool
+    temporary_name_for_rotation   = string
     drain_timeout_in_minutes      = number
     max_surge                     = string
     node_soak_duration_in_minutes = number
   })
   default = {
     name                          = "default"
-    vm_size                       = "Standard_D2ads_v5"
+    vm_size                       = "Standard_E4ads_v5"
     node_count                    = 3
     node_public_ip_enabled        = false
+    temporary_name_for_rotation   = "tmpprod"
     drain_timeout_in_minutes      = 0
     max_surge                     = "10%"
     node_soak_duration_in_minutes = 0
@@ -199,12 +203,17 @@ variable "dev_grouper_postgresql" {
   })
   default = {
     administrator_login          = "pgadmin"
-    version                      = "16"
+    version                      = "17"
     sku_name                     = "B_Standard_B1ms"
     storage_mb                   = 32768
     backup_retention_days        = 7
     geo_redundant_backup_enabled = false
     database_name                = "grouper"
+  }
+
+  validation {
+    condition     = can(tonumber(var.dev_grouper_postgresql.version)) && tonumber(var.dev_grouper_postgresql.version) >= 16
+    error_message = "dev_grouper_postgresql.version must be PostgreSQL 16 or newer."
   }
 }
 
@@ -221,12 +230,17 @@ variable "prod_grouper_postgresql" {
   })
   default = {
     administrator_login          = "pgadmin"
-    version                      = "16"
+    version                      = "17"
     sku_name                     = "GP_Standard_D2ds_v5"
     storage_mb                   = 65536
     backup_retention_days        = 14
     geo_redundant_backup_enabled = false
     database_name                = "grouper"
+  }
+
+  validation {
+    condition     = can(tonumber(var.prod_grouper_postgresql.version)) && tonumber(var.prod_grouper_postgresql.version) >= 16
+    error_message = "prod_grouper_postgresql.version must be PostgreSQL 16 or newer."
   }
 }
 

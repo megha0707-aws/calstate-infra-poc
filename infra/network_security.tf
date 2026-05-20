@@ -95,6 +95,20 @@ resource "azurerm_network_security_rule" "dev_psql_from_aks_inbound" {
   network_security_group_name = azurerm_network_security_group.dev_psql.name
 }
 
+resource "azurerm_network_security_rule" "dev_psql_intra_subnet_inbound" {
+  name                        = "Allow-PostgreSQL-Subnet-Inbound"
+  priority                    = 110
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_range           = "*"
+  destination_port_range      = "5432"
+  source_address_prefix       = local.dev_psql_cidr
+  destination_address_prefix  = local.dev_psql_cidr
+  resource_group_name         = azurerm_resource_group.dev.name
+  network_security_group_name = azurerm_network_security_group.dev_psql.name
+}
+
 resource "azurerm_network_security_rule" "dev_psql_deny_vnet_inbound" {
   name                        = "Deny-VNet-Inbound"
   priority                    = 4096
@@ -206,6 +220,20 @@ resource "azurerm_network_security_rule" "prod_psql_from_aks_inbound" {
   source_port_range           = "*"
   destination_port_range      = "5432"
   source_address_prefix       = local.prod_aks_node_cidr
+  destination_address_prefix  = local.prod_psql_cidr
+  resource_group_name         = azurerm_resource_group.prod.name
+  network_security_group_name = azurerm_network_security_group.prod_psql.name
+}
+
+resource "azurerm_network_security_rule" "prod_psql_intra_subnet_inbound" {
+  name                        = "Allow-PostgreSQL-Subnet-Inbound"
+  priority                    = 110
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_range           = "*"
+  destination_port_range      = "5432"
+  source_address_prefix       = local.prod_psql_cidr
   destination_address_prefix  = local.prod_psql_cidr
   resource_group_name         = azurerm_resource_group.prod.name
   network_security_group_name = azurerm_network_security_group.prod_psql.name

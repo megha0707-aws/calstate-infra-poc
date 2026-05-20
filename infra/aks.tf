@@ -11,12 +11,13 @@ resource "azurerm_kubernetes_cluster" "dev_aks_cluster" {
   sku_tier                = var.dev_aks_sku_tier
 
   default_node_pool {
-    name                   = var.dev_default_node_pool.name
-    node_count             = var.dev_default_node_pool.node_count
-    vm_size                = var.dev_default_node_pool.vm_size
-    vnet_subnet_id         = azurerm_subnet.dev-aks-tf-subnet.id
-    type                   = "VirtualMachineScaleSets"
-    node_public_ip_enabled = var.dev_default_node_pool.node_public_ip_enabled
+    name                        = var.dev_default_node_pool.name
+    node_count                  = var.dev_default_node_pool.node_count
+    vm_size                     = var.dev_default_node_pool.vm_size
+    vnet_subnet_id              = azurerm_subnet.dev-aks-tf-subnet.id
+    type                        = "VirtualMachineScaleSets"
+    node_public_ip_enabled      = var.dev_default_node_pool.node_public_ip_enabled
+    temporary_name_for_rotation = var.dev_default_node_pool.temporary_name_for_rotation
 
     upgrade_settings {
       drain_timeout_in_minutes      = var.dev_default_node_pool.drain_timeout_in_minutes
@@ -82,12 +83,13 @@ resource "azurerm_kubernetes_cluster" "prod_aks_cluster" {
   sku_tier                = var.prod_aks_sku_tier
 
   default_node_pool {
-    name                   = var.prod_default_node_pool.name
-    node_count             = var.prod_default_node_pool.node_count
-    vm_size                = var.prod_default_node_pool.vm_size
-    vnet_subnet_id         = azurerm_subnet.prod-aks-tf-subnet.id
-    type                   = "VirtualMachineScaleSets"
-    node_public_ip_enabled = var.prod_default_node_pool.node_public_ip_enabled
+    name                        = var.prod_default_node_pool.name
+    node_count                  = var.prod_default_node_pool.node_count
+    vm_size                     = var.prod_default_node_pool.vm_size
+    vnet_subnet_id              = azurerm_subnet.prod-aks-tf-subnet.id
+    type                        = "VirtualMachineScaleSets"
+    node_public_ip_enabled      = var.prod_default_node_pool.node_public_ip_enabled
+    temporary_name_for_rotation = var.prod_default_node_pool.temporary_name_for_rotation
 
     upgrade_settings {
       drain_timeout_in_minutes      = var.prod_default_node_pool.drain_timeout_in_minutes

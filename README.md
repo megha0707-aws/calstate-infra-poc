@@ -4,31 +4,53 @@ Terraform infrastructure for dedicated Grouper AKS environments in **West US 2**
 The stack manages separate `dev` and `prod` Azure foundations from the `infra/`
 folder.
 
-## Current Scope
+## Managed Scope
 
-This stack manages:
+This stack currently manages:
 
-- Resource groups for dev and prod
-- VNets and dedicated subnets for Application Gateway, PostgreSQL, and AKS
-- Baseline NSGs for Application Gateway and PostgreSQL subnets
-- Private PostgreSQL Flexible Servers with private DNS
-- AKS clusters using Azure CNI Overlay and Cilium
-- Azure Container Registries with AKS `AcrPull` assignments
-- Log Analytics workspaces
-- PostgreSQL connection secrets written to manually-managed Key Vaults
+- Resource groups for dev and prod.
+- VNets and dedicated subnets for Application Gateway, PostgreSQL, and AKS.
+- Baseline NSGs for Application Gateway and PostgreSQL subnets.
+- Private Azure Database for PostgreSQL Flexible Servers with private DNS.
+- AKS clusters using Azure CNI Overlay and Cilium.
+- Azure Container Registries with AKS `AcrPull` role assignments.
+- Log Analytics workspaces.
+- PostgreSQL connection secrets written to manually managed Key Vaults.
 
-These items are intentionally not configured in this Terraform stack yet and
-are expected to be added later or managed by a separate application/GitOps
-workflow:
+## Intentional Gaps
 
-- Application Gateway resources
-- Key Vault resources
-- Application Insights
-- Workload identities
-- Kubernetes manifests, ingress objects, Argo CD bootstrap, or NetworkPolicies
-- AKS diagnostic settings beyond the Log Analytics workspace
+These items are not configured in this Terraform stack yet. They are expected to
+be added later or managed by a separate application/GitOps workflow:
 
-## State And Resource Groups
+- Application Gateway resources.
+- Application Gateway public IP frontend, listeners, routing rules, probes, and
+  TLS certificate configuration.
+- Key Vault resources.
+- Application Insights.
+- Workload identities.
+- Kubernetes manifests, ingress objects, Argo CD bootstrap, or NetworkPolicies.
+- AKS diagnostic settings beyond the Log Analytics workspace.
+
+## Environment Summary
+
+```text
+location         = westus2
+deployment_name  = grouper
+
+dev RG           = Grouper-Dev
+prod RG          = Grouper-Prod
+
+dev AKS          = aks-grouper-dev-cluster
+prod AKS         = aks-grouper-prod-cluster
+
+dev Key Vault    = kv-dev-grouper
+prod Key Vault   = kv-prod-grouper
+```
+
+ACR names are generated with stable random suffixes unless `dev_acr_name` or
+`prod_acr_name` is set.
+
+## Terraform State
 
 Terraform state is stored remotely in Azure Blob Storage. The backend resources
 must exist before running `terraform init`.
@@ -48,23 +70,10 @@ container       = terraform
 state key       = dcs-apps.tfstate
 ```
 
-## Core Names
+Treat the backend as sensitive. Terraform state includes generated PostgreSQL
+admin passwords because Terraform manages the Key Vault secret resources.
 
-```text
-location         = westus2
-deployment_name  = grouper
-dev RG           = Grouper-Dev
-prod RG          = Grouper-Prod
-dev AKS          = aks-grouper-dev-cluster
-prod AKS         = aks-grouper-prod-cluster
-dev Key Vault    = kv-dev-grouper
-prod Key Vault   = kv-prod-grouper
-```
-
-ACR names are generated with stable random suffixes unless `dev_acr_name` or
-`prod_acr_name` is set.
-
-## Network
+## Network Design
 
 Each environment has its own VNet and non-overlapping AKS pod/service ranges.
 The VNet contains only Azure-routable subnets. AKS pod and service CIDRs are
@@ -86,13 +95,9 @@ prod services   = 10.239.21.0/24
 prod pods       = 10.239.72.0/21
 ```
 
-Network purpose:
+### Subnet Purpose
 
 ```text
-VNet
-  Main Azure network boundary for the environment. Azure subnets for AppGW,
-  PostgreSQL, and AKS nodes are carved from this range.
-
 Application Gateway subnet
   Reserved for a future Azure Application Gateway. The actual Application
   Gateway resource is not configured yet, but the subnet and NSG are ready.
@@ -118,14 +123,13 @@ AKS pod CIDR
   network.
 ```
 
-AKS uses Azure CNI Overlay, so pod CIDRs are not Azure VNet subnets. Each `/21`
-pod range gives room for up to eight nodes because Azure CNI Overlay allocates
-pod space to nodes in `/24` blocks.
+AKS uses Azure CNI Overlay. Each `/21` pod range gives room for up to eight
+nodes because Azure CNI Overlay allocates pod space to nodes in `/24` blocks.
 
 Before applying, confirm all VNet, pod, and service CIDRs are unique across
 campus/on-premises routes, VPN ranges, peered VNets, and other AKS clusters.
 
-## Network Object Names
+## Network Objects
 
 ```text
 dev VNet                = grouper-dev-tf-vnet
@@ -147,22 +151,91 @@ prod PostgreSQL DNS zone = grouper-prod.postgres.database.azure.com
 prod PostgreSQL DNS link = grouper-prod-grouper-psql-dns-link
 ```
 
+## Public Ingress Status
+
+Azure subnets are private address ranges inside a VNet. The App Gateway subnet
+is the correct landing zone for public ingress, but the subnet itself does not
+make the application public.
+
+Public HTTPS access to Grouper still requires:
+
+- Public IP resource for the Application Gateway frontend.
+- Azure Application Gateway resource, preferably WAF_v2 for internet-facing use.
+- HTTPS listener on port 443.
+- TLS certificate configuration, likely from Key Vault.
+- Backend pool, routing rule, and health probe targeting the AKS-hosted Grouper
+  service or ingress endpoint.
+- AKS ingress integration, such as Application Gateway Ingress Controller,
+  Application Gateway for Containers, or another agreed ingress pattern.
+
+Expected public request path after those pieces are added:
+
+```text
+Internet / Users
+  -> Application Gateway public IP
+  -> Application Gateway in the AppGW subnet
+  -> private AKS service or ingress endpoint
+  -> Grouper pods
+```
+
 ## Network Security
 
 Application Gateway subnet NSGs:
 
 ```text
-allow inbound TCP 80/443 from app_gateway_allowed_source_address_prefixes
-allow inbound TCP 65200-65535 from GatewayManager for Application Gateway v2
-allow AzureLoadBalancer health traffic
-deny other inbound traffic
+Allow-Frontend-Http-Https-Inbound
+  priority    = 100
+  source      = app_gateway_allowed_source_address_prefixes
+  destination = AppGW subnet CIDR
+  ports       = TCP 80, 443
+  purpose     = allow approved users or networks to reach future HTTP/HTTPS
+                Application Gateway listeners
+
+Allow-GatewayManager-Inbound
+  priority    = 110
+  source      = GatewayManager service tag
+  destination = AppGW subnet CIDR
+  ports       = TCP 65200-65535
+  purpose     = allow Azure Application Gateway v2 platform management traffic
+
+Allow-AzureLoadBalancer-Inbound
+  priority    = 120
+  source      = AzureLoadBalancer service tag
+  destination = AppGW subnet CIDR
+  ports       = any
+  purpose     = allow Azure load balancer health/platform traffic
+
+Deny-All-Inbound
+  priority    = 4096
+  source      = any
+  destination = AppGW subnet CIDR
+  ports       = any
+  purpose     = block all other inbound traffic to the AppGW subnet
 ```
 
 PostgreSQL subnet NSGs:
 
 ```text
-allow inbound TCP 5432 from the environment AKS node subnet
-deny other inbound traffic from the VNet
+Allow-AKS-PostgreSQL-Inbound
+  priority    = 100
+  source      = environment AKS node subnet CIDR
+  destination = PostgreSQL subnet CIDR
+  ports       = TCP 5432
+  purpose     = allow Grouper workloads on AKS nodes to reach PostgreSQL
+
+Allow-PostgreSQL-Subnet-Inbound
+  priority    = 110
+  source      = PostgreSQL subnet CIDR
+  destination = PostgreSQL subnet CIDR
+  ports       = TCP 5432
+  purpose     = allow PostgreSQL Flexible Server intra-subnet database traffic
+
+Deny-VNet-Inbound
+  priority    = 4096
+  source      = VirtualNetwork service tag
+  destination = PostgreSQL subnet CIDR
+  ports       = any
+  purpose     = block other inbound VNet traffic from reaching PostgreSQL
 ```
 
 AKS API access is restricted by `authorized_ip_ranges`. Current allowlists are
@@ -192,9 +265,16 @@ Current default node pools:
 
 ```text
 dev  node count = 1
+dev  VM size    = Standard_D4ads_v5
 prod node count = 3
-VM size         = Standard_D2ads_v5
+prod VM size    = Standard_E4ads_v5
 ```
+
+Dev uses a smaller general-purpose node to control cost while still providing
+more headroom than the original `Standard_D2ads_v5`. Prod uses memory-optimized
+`Standard_E4ads_v5` nodes for a standard Grouper deployment because Grouper's
+published baseline guidance calls for enough room for the daemon, UI, and web
+services containers.
 
 Container Insights is not enabled yet; the `oms_agent` blocks are intentionally
 commented out in `infra/aks.tf`.
@@ -208,8 +288,19 @@ dev  = psql-grouper-dev-grouper
 prod = psql-grouper-prod-grouper
 ```
 
+Current PostgreSQL defaults:
+
+```text
+dev  version = 17
+dev  SKU     = B_Standard_B1ms
+
+prod version = 17
+prod SKU     = GP_Standard_D2ds_v5
+```
+
 PostgreSQL public access is disabled. Admin passwords are generated with
-Terraform `random_password` resources and written to manually-managed Key Vaults:
+Terraform `random_password` resources and written to manually managed Key
+Vaults:
 
 ```text
 dev  = kv-dev-grouper
@@ -228,10 +319,6 @@ grouper-postgresql-database
 Key Vaults are managed manually outside this Terraform stack. The
 Terraform-running identity must have permission to set secrets in both vaults.
 
-Secret values are not printed in outputs, but they are stored in Terraform state
-because Terraform manages the `azurerm_key_vault_secret` resources. Treat the
-configured backend as sensitive.
-
 ## Before Planning
 
 Review these files before running a plan:
@@ -242,13 +329,14 @@ infra/variable.tf   subscription ID, resource group names, allowlists, AKS/DB si
 infra/local.tf      VNet and subnet CIDRs
 ```
 
-Also confirm these manual prerequisites:
+Confirm these manual prerequisites:
 
 - Backend resource group, storage account, and blob container exist.
 - `kv-dev-grouper` exists in `Grouper-Dev`.
 - `kv-prod-grouper` exists in `Grouper-Prod`.
 - The Terraform-running identity can write Key Vault secrets.
-- Required Azure resource providers are registered because provider auto-registration is disabled.
+- Required Azure resource providers are registered because provider
+  auto-registration is disabled.
 
 ## Terraform Commands
 
