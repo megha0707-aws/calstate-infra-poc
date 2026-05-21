@@ -36,6 +36,12 @@ resource "azurerm_postgresql_flexible_server" "dev_grouper" {
 
   tags = local.dev_tags
 
+  lifecycle {
+    replace_triggered_by = [
+      azurerm_subnet.dev-psql-tf-subnet.id,
+    ]
+  }
+
   depends_on = [azurerm_private_dns_zone_virtual_network_link.dev_grouper_postgresql]
 }
 
@@ -44,10 +50,6 @@ resource "azurerm_postgresql_flexible_server_database" "dev_grouper" {
   server_id = azurerm_postgresql_flexible_server.dev_grouper.id
   charset   = "UTF8"
   collation = "en_US.utf8"
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 # /******************************** Prod GROUPER POSTGRESQL CONFIGURATION **********************************************/
@@ -88,6 +90,12 @@ resource "azurerm_postgresql_flexible_server" "prod_grouper" {
 
   tags = local.prod_tags
 
+  lifecycle {
+    replace_triggered_by = [
+      azurerm_subnet.prod-psql-tf-subnet.id,
+    ]
+  }
+
   depends_on = [azurerm_private_dns_zone_virtual_network_link.prod_grouper_postgresql]
 }
 
@@ -96,8 +104,4 @@ resource "azurerm_postgresql_flexible_server_database" "prod_grouper" {
   server_id = azurerm_postgresql_flexible_server.prod_grouper.id
   charset   = "UTF8"
   collation = "en_US.utf8"
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }

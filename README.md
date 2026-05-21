@@ -90,15 +90,12 @@ Terraform applies a consistent tag set to resources that support Azure tags:
 
 ```text
 ManagedBy    = Terraform
-Project      = grouper
-App          = grouper
-env          = dev | prod
 Environment  = dev | prod
 Workload     = Grouper-Dev | Grouper-Prod
 ```
 
-Use `Workload` for environment-level grouping across inventory, operations,
-policy, and cost views:
+Use `Workload` as the primary grouping tag across inventory, operations, policy,
+and cost views:
 
 ```text
 Workload = Grouper-Dev   dev Grouper environment
@@ -132,20 +129,29 @@ The VNet contains only Azure-routable subnets. AKS pod and service CIDRs are
 configured on the cluster, but they are not Azure subnets.
 
 ```text
-dev VNet address spaces  = 10.239.10.0/24, 10.239.12.0/24
-dev AppGW subnet         = 10.239.12.0/24
-dev PostgreSQL subnet    = 10.239.10.64/27
-dev AKS node subnet      = 10.239.10.96/27
-dev services             = 10.239.11.0/24
-dev pods                 = 10.239.64.0/21
+assigned network block = 10.247.80.0/20
 
-prod VNet address spaces = 10.239.20.0/24, 10.239.22.0/24
-prod AppGW subnet        = 10.239.22.0/24
-prod PostgreSQL subnet   = 10.239.20.64/27
-prod AKS node subnet     = 10.239.20.96/27
-prod services            = 10.239.21.0/24
-prod pods                = 10.239.72.0/21
+dev VNet address space  = 10.247.80.0/23
+dev AppGW subnet        = 10.247.80.0/24
+dev PostgreSQL subnet   = 10.247.81.0/27
+dev AKS node subnet     = 10.247.81.32/27
+dev services            = 10.247.84.0/24
+dev pods                = 10.247.88.0/22
+
+prod VNet address space = 10.247.82.0/23
+prod AppGW subnet       = 10.247.82.0/24
+prod PostgreSQL subnet  = 10.247.83.0/27
+prod AKS node subnet    = 10.247.83.32/27
+prod services           = 10.247.85.0/24
+prod pods               = 10.247.92.0/22
+
+reserved spare space    = 10.247.86.0/23
 ```
+
+All VNet subnets, AKS pod CIDRs, and Kubernetes service CIDRs are allocated from
+the assigned `10.247.80.0/20` block without overlap. The pod and service ranges
+are AKS cluster ranges, not Azure VNet subnets.
+
 
 ### Subnet Purpose
 
@@ -158,8 +164,8 @@ Application Gateway subnet
   The original architecture diagram showed an App Gateway subnet size of /26.
   This repo intentionally uses /24 instead because Azure recommends /24 for
   Application Gateway v2 and WAF_v2 subnets to provide autoscale and maintenance
-  headroom. The AppGW /24 is added as a separate VNet address space so it does
-  not overlap the existing AKS node, PostgreSQL, service, or pod ranges.
+  headroom. The AppGW /24 is carved from the environment VNet address space and
+  remains dedicated to Application Gateway.
 
 PostgreSQL subnet
   Delegated to Microsoft.DBforPostgreSQL/flexibleServers. PostgreSQL Flexible
@@ -181,8 +187,10 @@ AKS pod CIDR
   network.
 ```
 
-AKS uses Azure CNI Overlay. Each `/21` pod range gives room for up to eight
-nodes because Azure CNI Overlay allocates pod space to nodes in `/24` blocks.
+AKS uses Azure CNI Overlay. Each node gets a fixed `/24` pod block from the
+cluster pod CIDR. The `/22` pod ranges provide four `/24` node blocks per
+environment, which covers prod's three-node pool plus one surge node during
+upgrades.
 
 Before applying, confirm all VNet, pod, and service CIDRs are unique across
 campus/on-premises routes, VPN ranges, peered VNets, and other AKS clusters.
@@ -296,8 +304,9 @@ Deny-VNet-Inbound
   purpose     = block other inbound VNet traffic from reaching PostgreSQL
 ```
 
-AKS API access is restricted by `authorized_ip_ranges`. Current allowlists are
-defined in `infra/variable.tf`.
+AKS API access is restricted by `authorized_ip_ranges`. Application Gateway
+frontend access is restricted by `app_gateway_allowed_source_address_prefixes`.
+
 
 NSGs are intentionally used only for coarse subnet boundaries. Pod-level
 microsegmentation should be added later with Kubernetes NetworkPolicy or
@@ -319,7 +328,7 @@ OIDC issuer         = true
 node public IPs     = false
 ```
 
-Current default node pools:
+Default node pools:
 
 ```text
 dev  node count = 1

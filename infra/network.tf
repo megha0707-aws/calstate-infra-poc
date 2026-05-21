@@ -4,20 +4,20 @@ resource "azurerm_virtual_network" "dev-tf-vnet" {
   name                = "${local.dev_name_prefix}-tf-vnet"
   location            = azurerm_resource_group.dev.location
   resource_group_name = azurerm_resource_group.dev.name
-  address_space       = [local.dev_vnet_cidr, local.dev_appgw_cidr]
+  address_space       = local.dev_vnet_address_spaces
 
   tags = local.dev_tags
 }
 
 resource "azurerm_subnet" "dev-appgw-tf-subnet" {
-  name                 = "${local.dev_name_prefix}-tf-appgw-subnet"
+  name                 = local.dev_appgw_subnet_name
   resource_group_name  = azurerm_resource_group.dev.name
   virtual_network_name = azurerm_virtual_network.dev-tf-vnet.name
   address_prefixes     = [local.dev_appgw_cidr]
 }
 
 resource "azurerm_subnet" "dev-psql-tf-subnet" {
-  name                 = "${local.dev_name_prefix}-tf-psql-subnet"
+  name                 = local.dev_psql_subnet_name
   resource_group_name  = azurerm_resource_group.dev.name
   virtual_network_name = azurerm_virtual_network.dev-tf-vnet.name
   address_prefixes     = [local.dev_psql_cidr]
@@ -36,7 +36,7 @@ resource "azurerm_subnet" "dev-psql-tf-subnet" {
 }
 
 resource "azurerm_subnet" "dev-aks-tf-subnet" {
-  name                 = "${local.dev_name_prefix}-tf-aks-subnet"
+  name                 = local.dev_aks_subnet_name
   resource_group_name  = azurerm_resource_group.dev.name
   virtual_network_name = azurerm_virtual_network.dev-tf-vnet.name
   address_prefixes     = [local.dev_aks_node_cidr]
@@ -52,20 +52,20 @@ resource "azurerm_virtual_network" "prod-tf-vnet" {
   name                = "${local.prod_name_prefix}-tf-vnet"
   location            = azurerm_resource_group.prod.location
   resource_group_name = azurerm_resource_group.prod.name
-  address_space       = [local.prod_vnet_cidr, local.prod_appgw_cidr]
+  address_space       = local.prod_vnet_address_spaces
 
   tags = local.prod_tags
 }
 
 resource "azurerm_subnet" "prod-appgw-tf-subnet" {
-  name                 = "${local.prod_name_prefix}-tf-appgw-subnet"
+  name                 = local.prod_appgw_subnet_name
   resource_group_name  = azurerm_resource_group.prod.name
   virtual_network_name = azurerm_virtual_network.prod-tf-vnet.name
   address_prefixes     = [local.prod_appgw_cidr]
 }
 
 resource "azurerm_subnet" "prod-psql-tf-subnet" {
-  name                 = "${local.prod_name_prefix}-tf-psql-subnet"
+  name                 = local.prod_psql_subnet_name
   resource_group_name  = azurerm_resource_group.prod.name
   virtual_network_name = azurerm_virtual_network.prod-tf-vnet.name
   address_prefixes     = [local.prod_psql_cidr]
@@ -84,7 +84,7 @@ resource "azurerm_subnet" "prod-psql-tf-subnet" {
 }
 
 resource "azurerm_subnet" "prod-aks-tf-subnet" {
-  name                 = "${local.prod_name_prefix}-tf-aks-subnet"
+  name                 = local.prod_aks_subnet_name
   resource_group_name  = azurerm_resource_group.prod.name
   virtual_network_name = azurerm_virtual_network.prod-tf-vnet.name
   address_prefixes     = [local.prod_aks_node_cidr]

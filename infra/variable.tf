@@ -67,13 +67,13 @@ variable "prefix" {
 variable "authorized_ip_ranges" {
   description = "CIDRs allowed to access the AKS API servers."
   type        = list(string)
-  default     = ["137.145.0.0/16", "47.155.238.17/32"]
+  default     = ["137.145.0.0/16", "47.155.238.17/32", "13.64.65.37/32"]
 }
 
 variable "app_gateway_allowed_source_address_prefixes" {
   description = "Source address prefixes allowed to reach the Application Gateway frontend listeners."
   type        = list(string)
-  default     = ["137.145.0.0/16", "47.155.238.17/32"]
+  default     = ["137.145.0.0/16", "47.155.238.17/32", "13.64.65.37/32"]
 }
 
 variable "dev_aks_sku_tier" {
@@ -162,9 +162,9 @@ variable "dev_network_profile" {
     network_plugin_mode = "overlay"
     network_data_plane  = "cilium"
     network_policy      = "cilium"
-    pod_cidr            = "10.239.64.0/21"
-    service_cidr        = "10.239.11.0/24"
-    dns_service_ip      = "10.239.11.10"
+    pod_cidr            = "10.247.88.0/22"
+    service_cidr        = "10.247.84.0/24"
+    dns_service_ip      = "10.247.84.10"
   }
 }
 
@@ -184,9 +184,9 @@ variable "prod_network_profile" {
     network_plugin_mode = "overlay"
     network_data_plane  = "cilium"
     network_policy      = "cilium"
-    pod_cidr            = "10.239.72.0/21"
-    service_cidr        = "10.239.21.0/24"
-    dns_service_ip      = "10.239.21.10"
+    pod_cidr            = "10.247.92.0/22"
+    service_cidr        = "10.247.85.0/24"
+    dns_service_ip      = "10.247.85.10"
   }
 }
 

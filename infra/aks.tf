@@ -66,6 +66,10 @@ resource "azurerm_kubernetes_cluster" "dev_aks_cluster" {
     ignore_changes = [
       upgrade_override,
     ]
+
+    replace_triggered_by = [
+      azurerm_subnet.dev-aks-tf-subnet.id,
+    ]
   }
 
   depends_on = [azurerm_log_analytics_workspace.dev]
@@ -144,6 +148,10 @@ resource "azurerm_kubernetes_cluster" "prod_aks_cluster" {
   lifecycle {
     ignore_changes = [
       upgrade_override,
+    ]
+
+    replace_triggered_by = [
+      azurerm_subnet.prod-aks-tf-subnet.id,
     ]
   }
 
