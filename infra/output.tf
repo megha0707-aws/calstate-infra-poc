@@ -1,6 +1,40 @@
 output "configuration_summary" {
   description = "Summary of the dedicated Grouper AKS infrastructure template."
   value = {
+    hub = {
+      region         = azurerm_resource_group.hub.location
+      resource_group = azurerm_resource_group.hub.name
+      virtual_network = {
+        name = azurerm_virtual_network.hub-tf-vnet.name
+        id   = azurerm_virtual_network.hub-tf-vnet.id
+      }
+      subnets = {
+        gateway = azurerm_subnet.hub-gateway-subnet.id
+      }
+      peerings = {
+        hub_to_dev  = azurerm_virtual_network_peering.hub_to_dev.name
+        dev_to_hub  = azurerm_virtual_network_peering.dev_to_hub.name
+        hub_to_prod = azurerm_virtual_network_peering.hub_to_prod.name
+        prod_to_hub = azurerm_virtual_network_peering.prod_to_hub.name
+      }
+      s2s_vpn = {
+        enabled                       = var.enable_grouper_aks_s2s_vpn
+        gateway_name                  = try(azurerm_virtual_network_gateway.grouper_aks[0].name, null)
+        gateway_public_ip_name        = try(azurerm_public_ip.grouper_aks_vpn_gateway[0].name, null)
+        gateway_public_ip_address     = try(azurerm_public_ip.grouper_aks_vpn_gateway[0].ip_address, null)
+        local_network_gateway_name    = try(azurerm_local_network_gateway.grouper_aks_onprem_palo_alto[0].name, null)
+        virtual_network_connection    = try(azurerm_virtual_network_gateway_connection.grouper_aks_onprem_palo_alto[0].name, null)
+        prod_onprem_database_cidrs    = var.prod_onprem_database_cidrs
+        gateway_transit_on_peerings   = var.enable_grouper_aks_s2s_vpn
+        route_model                   = "static"
+        azure_vpn_gateway_bgp_enabled = false
+        key_vault_secret_names = {
+          shared_key                     = try(azurerm_key_vault_secret.dev_grouper_aks_s2s_onprem_shared_key[0].name, null)
+          written_to_existing_key_vaults = [data.azurerm_key_vault.dev.name, data.azurerm_key_vault.prod.name]
+        }
+      }
+    }
+
     dev = {
       region         = azurerm_resource_group.dev.location
       resource_group = azurerm_resource_group.dev.name

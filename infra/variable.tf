@@ -43,6 +43,17 @@ variable "resource_group_name_prod" {
   }
 }
 
+variable "resource_group_name_hub" {
+  description = "Optional shared hub resource group name for Grouper AKS connectivity. Leave null to derive one from deployment_name."
+  type        = string
+  default     = "Grouper-AKS-Hub"
+
+  validation {
+    condition     = var.resource_group_name_hub == null || can(regex("^[A-Za-z0-9._()\\-]{1,90}$", var.resource_group_name_hub))
+    error_message = "resource_group_name_hub must be 1-90 Azure-compatible resource group name characters when set."
+  }
+}
+
 variable "prefix" {
   description = "Environment labels appended to deployment_name for Azure resource names."
   type        = map(string)
@@ -285,5 +296,82 @@ variable "prod_key_vault_name" {
   validation {
     condition     = var.prod_key_vault_name == null || can(regex("^[a-zA-Z][a-zA-Z0-9-]{1,22}[a-zA-Z0-9]$", var.prod_key_vault_name))
     error_message = "prod_key_vault_name must be 3-24 characters, start with a letter, end with a letter or number, and contain only letters, numbers, and hyphens."
+  }
+}
+
+variable "enable_grouper_aks_s2s_vpn" {
+  description = "Whether to create the shared Grouper AKS hub VPN Gateway, local network gateway, and S2S connection to the on-premises Palo Alto firewall."
+  type        = bool
+  default     = false
+}
+
+variable "grouper_aks_connectivity_resource_name_prefix" {
+  description = "Azure-facing resource name prefix for shared Grouper AKS VPN connectivity objects. Defaults to the existing enterprise VPN gateway pattern shown in Azure: AZR-prod-<Workload>."
+  type        = string
+  default     = "AZR-prod-GrouperAKS"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9][A-Za-z0-9.-]{1,70}[A-Za-z0-9]$", var.grouper_aks_connectivity_resource_name_prefix))
+    error_message = "grouper_aks_connectivity_resource_name_prefix must be 3-72 characters, start and end with a letter or number, and contain only letters, numbers, periods, and hyphens."
+  }
+}
+
+variable "grouper_aks_vpn_gateway_sku" {
+  description = "Azure VPN Gateway SKU for the shared Grouper AKS hub. Use an AZ SKU for production resiliency."
+  type        = string
+  default     = "VpnGw1AZ"
+
+  validation {
+    condition = contains([
+      "VpnGw1AZ",
+      "VpnGw2AZ",
+      "VpnGw3AZ",
+      "VpnGw4AZ",
+      "VpnGw5AZ",
+    ], var.grouper_aks_vpn_gateway_sku)
+    error_message = "grouper_aks_vpn_gateway_sku must be one of VpnGw1AZ, VpnGw2AZ, VpnGw3AZ, VpnGw4AZ, or VpnGw5AZ."
+  }
+}
+
+variable "onprem_palo_alto_public_ip" {
+  description = "Public floating IP address of the on-premises Palo Alto HA pair used for IPsec termination."
+  type        = string
+  default     = null
+}
+
+variable "prod_onprem_database_cidrs" {
+  description = "Production on-premises database CIDR prefixes reachable over the Grouper AKS S2S VPN tunnel. For static routing, these are the local network gateway address spaces."
+  type        = list(string)
+  default     = []
+}
+
+variable "grouper_aks_s2s_onprem_shared_key" {
+  description = "Optional pre-shared key for the Grouper AKS S2S VPN connection. Leave null to let Terraform generate one and write it to both existing dev/prod Key Vaults; Terraform state must still be treated as sensitive."
+  type        = string
+  default     = null
+  sensitive   = true
+}
+
+variable "grouper_aks_s2s_ipsec_policy" {
+  description = "Modern IKEv2/IPsec policy for the Grouper AKS S2S VPN connection. Palo Alto Phase 1 and Phase 2 settings must match these values."
+  type = object({
+    dh_group         = string
+    ike_encryption   = string
+    ike_integrity    = string
+    ipsec_encryption = string
+    ipsec_integrity  = string
+    pfs_group        = string
+    sa_datasize      = number
+    sa_lifetime      = number
+  })
+  default = {
+    dh_group         = "DHGroup14"
+    ike_encryption   = "AES256"
+    ike_integrity    = "SHA256"
+    ipsec_encryption = "AES256"
+    ipsec_integrity  = "SHA256"
+    pfs_group        = "PFS14"
+    sa_datasize      = 102400000
+    sa_lifetime      = 27000
   }
 }

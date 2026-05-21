@@ -66,3 +66,24 @@ resource "azurerm_key_vault_secret" "prod_grouper_postgresql_database" {
   key_vault_id = data.azurerm_key_vault.prod.id
   content_type = "text/plain"
 }
+
+# The shared Grouper AKS S2S VPN pre-shared key is written to both existing
+# environment vaults because the hub VPN is shared by dev and prod AKS workloads.
+
+resource "azurerm_key_vault_secret" "dev_grouper_aks_s2s_onprem_shared_key" {
+  count = var.enable_grouper_aks_s2s_vpn ? 1 : 0
+
+  name         = "grouper-aks-s2s-vpn-shared-key"
+  value        = local.grouper_aks_s2s_onprem_shared_key
+  key_vault_id = data.azurerm_key_vault.dev.id
+  content_type = "text/plain"
+}
+
+resource "azurerm_key_vault_secret" "prod_grouper_aks_s2s_onprem_shared_key" {
+  count = var.enable_grouper_aks_s2s_vpn ? 1 : 0
+
+  name         = "grouper-aks-s2s-vpn-shared-key"
+  value        = local.grouper_aks_s2s_onprem_shared_key
+  key_vault_id = data.azurerm_key_vault.prod.id
+  content_type = "text/plain"
+}
