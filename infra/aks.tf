@@ -14,6 +14,7 @@ resource "azurerm_kubernetes_cluster" "dev_aks_cluster" {
     name                        = var.dev_default_node_pool.name
     node_count                  = var.dev_default_node_pool.node_count
     vm_size                     = var.dev_default_node_pool.vm_size
+    max_pods                    = var.dev_default_node_pool.max_pods
     vnet_subnet_id              = azurerm_subnet.dev-aks-tf-subnet.id
     type                        = "VirtualMachineScaleSets"
     node_public_ip_enabled      = var.dev_default_node_pool.node_public_ip_enabled
@@ -97,6 +98,7 @@ resource "azurerm_kubernetes_cluster" "prod_aks_cluster" {
     name                        = var.prod_default_node_pool.name
     node_count                  = var.prod_default_node_pool.node_count
     vm_size                     = var.prod_default_node_pool.vm_size
+    max_pods                    = var.prod_default_node_pool.max_pods
     vnet_subnet_id              = azurerm_subnet.prod-aks-tf-subnet.id
     type                        = "VirtualMachineScaleSets"
     node_public_ip_enabled      = var.prod_default_node_pool.node_public_ip_enabled

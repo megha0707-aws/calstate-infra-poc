@@ -35,6 +35,21 @@ resource "azurerm_subnet" "dev-psql-tf-subnet" {
   ]
 }
 
+resource "azurerm_subnet" "dev-infra-tf-subnet" {
+  name                 = local.dev_infra_subnet_name
+  resource_group_name  = azurerm_resource_group.dev.name
+  virtual_network_name = azurerm_virtual_network.dev-tf-vnet.name
+  address_prefixes     = [local.dev_infra_cidr]
+}
+
+resource "azurerm_subnet" "dev-private-endpoint-tf-subnet" {
+  name                              = local.dev_private_endpoint_subnet_name
+  resource_group_name               = azurerm_resource_group.dev.name
+  virtual_network_name              = azurerm_virtual_network.dev-tf-vnet.name
+  address_prefixes                  = [local.dev_private_endpoint_cidr]
+  private_endpoint_network_policies = "Disabled"
+}
+
 resource "azurerm_subnet" "dev-aks-tf-subnet" {
   name                 = local.dev_aks_subnet_name
   resource_group_name  = azurerm_resource_group.dev.name
@@ -83,6 +98,21 @@ resource "azurerm_subnet" "prod-psql-tf-subnet" {
   ]
 }
 
+resource "azurerm_subnet" "prod-infra-tf-subnet" {
+  name                 = local.prod_infra_subnet_name
+  resource_group_name  = azurerm_resource_group.prod.name
+  virtual_network_name = azurerm_virtual_network.prod-tf-vnet.name
+  address_prefixes     = [local.prod_infra_cidr]
+}
+
+resource "azurerm_subnet" "prod-private-endpoint-tf-subnet" {
+  name                              = local.prod_private_endpoint_subnet_name
+  resource_group_name               = azurerm_resource_group.prod.name
+  virtual_network_name              = azurerm_virtual_network.prod-tf-vnet.name
+  address_prefixes                  = [local.prod_private_endpoint_cidr]
+  private_endpoint_network_policies = "Disabled"
+}
+
 resource "azurerm_subnet" "prod-aks-tf-subnet" {
   name                 = local.prod_aks_subnet_name
   resource_group_name  = azurerm_resource_group.prod.name
@@ -110,6 +140,13 @@ resource "azurerm_subnet" "hub-gateway-subnet" {
   resource_group_name  = azurerm_resource_group.hub.name
   virtual_network_name = azurerm_virtual_network.hub-tf-vnet.name
   address_prefixes     = [local.hub_gateway_subnet_cidr]
+}
+
+resource "azurerm_subnet" "hub-bastion-subnet" {
+  name                 = local.hub_bastion_subnet_name
+  resource_group_name  = azurerm_resource_group.hub.name
+  virtual_network_name = azurerm_virtual_network.hub-tf-vnet.name
+  address_prefixes     = [local.hub_bastion_subnet_cidr]
 }
 
 resource "azurerm_virtual_network_peering" "hub_to_dev" {

@@ -13,32 +13,42 @@ locals {
 
   assigned_network_cidr = "10.247.80.0/20"
 
-  dev_vnet_cidr     = "10.247.80.0/23"
-  dev_appgw_cidr    = "10.247.80.0/24"
-  dev_psql_cidr     = "10.247.81.0/27"
-  dev_aks_node_cidr = "10.247.81.32/27"
+  dev_vnet_cidr             = "10.247.80.0/23"
+  dev_appgw_cidr            = "10.247.80.0/24"
+  dev_psql_cidr             = "10.247.81.0/27"
+  dev_infra_cidr            = "10.247.81.96/27"
+  dev_private_endpoint_cidr = "10.247.81.64/28"
+  dev_aks_node_cidr         = "10.247.81.128/25"
 
-  prod_vnet_cidr     = "10.247.82.0/23"
-  prod_appgw_cidr    = "10.247.82.0/24"
-  prod_psql_cidr     = "10.247.83.0/27"
-  prod_aks_node_cidr = "10.247.83.32/27"
+  prod_vnet_cidr             = "10.247.82.0/23"
+  prod_appgw_cidr            = "10.247.82.0/24"
+  prod_psql_cidr             = "10.247.83.0/27"
+  prod_infra_cidr            = "10.247.83.96/27"
+  prod_private_endpoint_cidr = "10.247.83.64/28"
+  prod_aks_node_cidr         = "10.247.83.128/25"
 
   hub_vnet_cidr           = "10.247.86.0/24"
   hub_gateway_subnet_cidr = "10.247.86.0/26"
+  hub_bastion_subnet_cidr = "10.247.86.64/26"
 
   dev_vnet_address_spaces  = [local.dev_vnet_cidr]
   prod_vnet_address_spaces = [local.prod_vnet_cidr]
   hub_vnet_address_spaces  = [local.hub_vnet_cidr]
 
-  dev_appgw_subnet_name = "${local.dev_name_prefix}-tf-appgw-subnet"
-  dev_psql_subnet_name  = "${local.dev_name_prefix}-tf-psql-subnet"
-  dev_aks_subnet_name   = "${local.dev_name_prefix}-tf-aks-subnet"
+  dev_appgw_subnet_name            = "${local.dev_name_prefix}-tf-appgw-subnet"
+  dev_psql_subnet_name             = "${local.dev_name_prefix}-tf-psql-subnet"
+  dev_infra_subnet_name            = "${local.dev_name_prefix}-tf-infra-subnet"
+  dev_private_endpoint_subnet_name = "${local.dev_name_prefix}-tf-private-endpoint-subnet"
+  dev_aks_subnet_name              = "${local.dev_name_prefix}-tf-aks-subnet"
 
-  prod_appgw_subnet_name = "${local.prod_name_prefix}-tf-appgw-subnet"
-  prod_psql_subnet_name  = "${local.prod_name_prefix}-tf-psql-subnet"
-  prod_aks_subnet_name   = "${local.prod_name_prefix}-tf-aks-subnet"
+  prod_appgw_subnet_name            = "${local.prod_name_prefix}-tf-appgw-subnet"
+  prod_psql_subnet_name             = "${local.prod_name_prefix}-tf-psql-subnet"
+  prod_infra_subnet_name            = "${local.prod_name_prefix}-tf-infra-subnet"
+  prod_private_endpoint_subnet_name = "${local.prod_name_prefix}-tf-private-endpoint-subnet"
+  prod_aks_subnet_name              = "${local.prod_name_prefix}-tf-aks-subnet"
 
   hub_gateway_subnet_name = "GatewaySubnet"
+  hub_bastion_subnet_name = "AzureBastionSubnet"
 
   dev_aks_cluster_name  = "aks-${local.dev_name_prefix}-cluster"
   prod_aks_cluster_name = "aks-${local.prod_name_prefix}-cluster"
@@ -53,10 +63,10 @@ locals {
   grouper_aks_onprem_palo_alto_lng_name         = "${local.grouper_aks_connectivity_resource_name_prefix}-PaloAlto-LNG"
   grouper_aks_onprem_palo_alto_connection_name  = "${local.grouper_aks_connectivity_resource_name_prefix}-PaloAlto-CON"
 
-  grouper_aks_s2s_onprem_shared_key = coalesce(
+  grouper_aks_s2s_onprem_shared_key = var.enable_grouper_aks_s2s_vpn ? coalesce(
     var.grouper_aks_s2s_onprem_shared_key,
-    try(random_password.grouper_aks_s2s_onprem_shared_key[0].result, null)
-  )
+    random_password.grouper_aks_s2s_onprem_shared_key[0].result
+  ) : null
 
   dev_tags = {
     ManagedBy   = "Terraform"

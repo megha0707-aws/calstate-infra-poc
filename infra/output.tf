@@ -10,6 +10,7 @@ output "configuration_summary" {
       }
       subnets = {
         gateway = azurerm_subnet.hub-gateway-subnet.id
+        bastion = azurerm_subnet.hub-bastion-subnet.id
       }
       peerings = {
         hub_to_dev  = azurerm_virtual_network_peering.hub_to_dev.name
@@ -47,9 +48,11 @@ output "configuration_summary" {
         id   = azurerm_virtual_network.dev-tf-vnet.id
       }
       subnets = {
-        app_gateway = azurerm_subnet.dev-appgw-tf-subnet.id
-        postgresql  = azurerm_subnet.dev-psql-tf-subnet.id
-        aks         = azurerm_subnet.dev-aks-tf-subnet.id
+        app_gateway      = azurerm_subnet.dev-appgw-tf-subnet.id
+        postgresql       = azurerm_subnet.dev-psql-tf-subnet.id
+        infra            = azurerm_subnet.dev-infra-tf-subnet.id
+        private_endpoint = azurerm_subnet.dev-private-endpoint-tf-subnet.id
+        aks              = azurerm_subnet.dev-aks-tf-subnet.id
       }
       container_registry = {
         name         = azurerm_container_registry.dev.name
@@ -85,7 +88,8 @@ output "configuration_summary" {
         private_dns_zone = azurerm_private_dns_zone.dev_grouper_postgresql.name
       }
       node_pools = {
-        default = var.dev_default_node_pool.name
+        default  = var.dev_default_node_pool.name
+        max_pods = var.dev_default_node_pool.max_pods
       }
     }
 
@@ -101,9 +105,11 @@ output "configuration_summary" {
         id   = azurerm_virtual_network.prod-tf-vnet.id
       }
       subnets = {
-        app_gateway = azurerm_subnet.prod-appgw-tf-subnet.id
-        postgresql  = azurerm_subnet.prod-psql-tf-subnet.id
-        aks         = azurerm_subnet.prod-aks-tf-subnet.id
+        app_gateway      = azurerm_subnet.prod-appgw-tf-subnet.id
+        postgresql       = azurerm_subnet.prod-psql-tf-subnet.id
+        infra            = azurerm_subnet.prod-infra-tf-subnet.id
+        private_endpoint = azurerm_subnet.prod-private-endpoint-tf-subnet.id
+        aks              = azurerm_subnet.prod-aks-tf-subnet.id
       }
       container_registry = {
         name         = azurerm_container_registry.prod.name
@@ -139,7 +145,8 @@ output "configuration_summary" {
         private_dns_zone = azurerm_private_dns_zone.prod_grouper_postgresql.name
       }
       node_pools = {
-        default = var.prod_default_node_pool.name
+        default  = var.prod_default_node_pool.name
+        max_pods = var.prod_default_node_pool.max_pods
       }
     }
   }

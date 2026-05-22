@@ -9,13 +9,13 @@ This stack manages:
 
 - Dev, prod, and shared hub resource groups.
 - Dev and prod VNets with dedicated subnets for Application Gateway, PostgreSQL,
-  and AKS nodes.
-- Shared Grouper AKS hub VNet with `GatewaySubnet`.
+  infra hosts, private endpoints, and AKS nodes/pods.
+- Shared Grouper AKS hub VNet with `GatewaySubnet` and `AzureBastionSubnet`.
 - Hub/spoke VNet peerings between the hub, dev, and prod VNets.
 - Optional Azure VPN Gateway S2S resources for Palo Alto IPsec termination.
 - PostgreSQL Flexible Servers with private DNS.
 - Baseline NSGs for Application Gateway and PostgreSQL subnets.
-- AKS clusters using Azure CNI Overlay and Cilium.
+- AKS clusters using single-subnet Azure CNI flat networking and Cilium.
 - Azure Container Registries and AKS `AcrPull` role assignments.
 - Log Analytics workspaces.
 - Azure Monitor workspaces, Managed Prometheus, and Managed Grafana.
@@ -27,6 +27,9 @@ This stack does **not** currently manage:
 - Application Gateway resources.
 - Application Gateway public IPs, listeners, routing rules, probes, or TLS
   certificates.
+- Azure Bastion host resources.
+- Private endpoint resources.
+- Storage account resources.
 - Key Vault resources themselves.
 - Application Insights.
 - Workload identities.
@@ -54,7 +57,8 @@ prod ACR         = csugrouperprodacr
 ```
 
 ACR names are globally unique and immutable. Renaming an ACR replaces the
-registry.
+registry. ACR private endpoints require the Premium SKU; this stack keeps the
+registries on Basic for now, so ACR private endpoint deployment is deferred.
 
 ## Terraform State
 
@@ -73,36 +77,43 @@ pre-shared key.
 
 ## Network Plan
 
-All current Azure, AKS pod, and Kubernetes service CIDRs are allocated from
+All current Azure and Kubernetes service CIDRs are allocated from
 `10.247.80.0/20`.
 
 ```text
 dev VNet address space  = 10.247.80.0/23
 dev AppGW subnet        = 10.247.80.0/24
 dev PostgreSQL subnet   = 10.247.81.0/27
-dev AKS node subnet     = 10.247.81.32/27
+dev Infra subnet        = 10.247.81.96/27
+dev private endpoint    = 10.247.81.64/28
+dev AKS subnet          = 10.247.81.128/25
 dev services            = 10.247.84.0/24
-dev pods                = 10.247.88.0/22
 
 prod VNet address space = 10.247.82.0/23
 prod AppGW subnet       = 10.247.82.0/24
 prod PostgreSQL subnet  = 10.247.83.0/27
-prod AKS node subnet    = 10.247.83.32/27
+prod Infra subnet       = 10.247.83.96/27
+prod private endpoint   = 10.247.83.64/28
+prod AKS subnet         = 10.247.83.128/25
 prod services           = 10.247.85.0/24
-prod pods               = 10.247.92.0/22
 
 hub VNet address space  = 10.247.86.0/24
 hub GatewaySubnet       = 10.247.86.0/26
+hub AzureBastionSubnet  = 10.247.86.64/26
 
 reserved spare space    = 10.247.87.0/24
 ```
 
 `GatewaySubnet` is reserved for Azure VPN Gateway. Do not attach an NSG to this
-subnet.
+subnet. `AzureBastionSubnet` is reserved for future Azure Bastion deployment and
+must keep this exact Azure-required subnet name.
 
-AKS uses Azure CNI Overlay. Pod and service CIDRs are cluster ranges, not Azure
-VNet subnets. Confirm these ranges do not overlap with campus/on-premises
-routes, peered VNets, VPN ranges, or other AKS clusters before applying.
+AKS uses single-subnet Azure CNI flat networking. AKS nodes and pods consume IPs
+from the AKS subnet, so the `/25` AKS subnets intentionally use `max_pods = 20`.
+This supports the current prod shape of three nodes and a practical four-node
+ceiling with one upgrade surge. Service CIDRs remain cluster ranges and must not
+overlap with campus/on-premises routes, peered VNets, VPN ranges, or other AKS
+clusters.
 
 ## Network Objects
 
@@ -110,6 +121,8 @@ routes, peered VNets, VPN ranges, or other AKS clusters before applying.
 dev VNet                = grouper-dev-tf-vnet
 dev AppGW subnet        = grouper-dev-tf-appgw-subnet
 dev PostgreSQL subnet   = grouper-dev-tf-psql-subnet
+dev Infra subnet        = grouper-dev-tf-infra-subnet
+dev Private EP subnet   = grouper-dev-tf-private-endpoint-subnet
 dev AKS subnet          = grouper-dev-tf-aks-subnet
 dev AppGW NSG           = grouper-dev-appgw-nsg
 dev PostgreSQL NSG      = grouper-dev-psql-nsg
@@ -118,6 +131,8 @@ dev PostgreSQL DNS zone = grouper-dev.postgres.database.azure.com
 prod VNet                = grouper-prod-tf-vnet
 prod AppGW subnet        = grouper-prod-tf-appgw-subnet
 prod PostgreSQL subnet   = grouper-prod-tf-psql-subnet
+prod Infra subnet        = grouper-prod-tf-infra-subnet
+prod Private EP subnet   = grouper-prod-tf-private-endpoint-subnet
 prod AKS subnet          = grouper-prod-tf-aks-subnet
 prod AppGW NSG           = grouper-prod-appgw-nsg
 prod PostgreSQL NSG      = grouper-prod-psql-nsg
@@ -125,7 +140,32 @@ prod PostgreSQL DNS zone = grouper-prod.postgres.database.azure.com
 
 hub VNet                = grouper-aks-hub-tf-vnet
 hub GatewaySubnet       = GatewaySubnet
+hub Bastion subnet      = AzureBastionSubnet
 ```
+
+## Network Security
+
+Application Gateway subnets have dedicated NSGs. Current inbound rules allow:
+
+```text
+80/443 from app_gateway_allowed_source_address_prefixes
+65200-65535 from GatewayManager
+all protocols from AzureLoadBalancer
+all other inbound denied
+```
+
+PostgreSQL delegated subnets have dedicated NSGs. Current inbound rules allow:
+
+```text
+5432 from the matching environment AKS subnet
+5432 from the matching PostgreSQL subnet
+all other VirtualNetwork inbound denied
+```
+
+The AKS, infra, and private endpoint subnets do not currently have NSGs
+attached. Add subnet-specific NSGs before placing VMs or other directly managed
+compute in the infra subnets. `GatewaySubnet` and `AzureBastionSubnet` do not
+have NSGs attached.
 
 ## Hybrid Connectivity
 
@@ -136,7 +176,7 @@ On-premises Palo Alto HA pair
   -> IPsec/IKEv2 site-to-site VPN
   -> shared Grouper AKS hub VNet
   -> hub/spoke VNet peering with gateway transit
-  -> dev/prod AKS node subnets
+  -> dev/prod AKS subnets
   -> Grouper pods
 ```
 
@@ -155,13 +195,13 @@ grouper_aks_s2s_onprem_shared_key       = null
 Leave `enable_grouper_aks_s2s_vpn` unset, or set it to `false`, if you do not
 want Terraform to create billable Azure VPN Gateway resources.
 
-With Azure CNI Overlay, pod egress to on-premises networks is SNATed to AKS node
-IPs. Palo Alto policy and on-premises return routing should allow these Azure
-source CIDRs:
+With single-subnet Azure CNI flat networking, AKS nodes and pods use IPs from
+the AKS subnet. Palo Alto policy and on-premises return routing should allow
+these Azure source CIDRs:
 
 ```text
-dev AKS node source  = 10.247.81.32/27
-prod AKS node source = 10.247.83.32/27
+dev AKS source  = 10.247.81.128/25
+prod AKS source = 10.247.83.128/25
 ```
 
 Database ports are not needed to create the VPN tunnel, but they are required
@@ -283,24 +323,37 @@ Both clusters use:
 
 ```text
 network plugin      = azure
-network plugin mode = overlay
+network plugin mode = unset / node subnet
 network data plane  = cilium
 network policy      = cilium
 private API server  = false
 OIDC issuer         = true
 node public IPs     = false
+max pods per node   = 20
 ```
 
 Default node pools:
 
 ```text
-dev  node count = 1
+dev  node count = 2
 dev  VM size    = Standard_D4ads_v5
+dev  max pods   = 20
 prod node count = 3
 prod VM size    = Standard_E4ads_v5
+prod max pods   = 20
 ```
 
 AKS API access is restricted by `authorized_ip_ranges`.
+
+Single-subnet flat AKS `/25` capacity examples:
+
+```text
+3 nodes + 1 surge, max_pods 20 = 84 IPs
+4 nodes + 1 surge, max_pods 20 = 105 IPs
+```
+
+A `/25` has 128 total IP addresses, with five reserved by Azure. Treat four
+nodes as the practical ceiling with the current `max_pods = 20` setting.
 
 ## PostgreSQL And Key Vault
 
@@ -332,6 +385,16 @@ grouper-postgresql-database
 
 The Key Vault resources are manually managed outside this Terraform stack. The
 Terraform-running identity must be able to set secrets in both vaults.
+
+## Private Endpoints
+
+Each environment has a dedicated `/28` private endpoint subnet reserved for
+future private access to platform services such as ACR or Storage. Terraform
+does not currently create private endpoints. Private endpoint network policies
+are disabled on these reserved subnets.
+
+ACR private endpoints are intentionally deferred because the current registries
+use the Basic SKU. Upgrade ACR to Premium before adding ACR Private Link.
 
 ## Monitoring
 

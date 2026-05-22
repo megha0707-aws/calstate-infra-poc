@@ -115,6 +115,7 @@ variable "dev_default_node_pool" {
     name                          = string
     vm_size                       = string
     node_count                    = number
+    max_pods                      = number
     node_public_ip_enabled        = bool
     temporary_name_for_rotation   = string
     drain_timeout_in_minutes      = number
@@ -124,12 +125,28 @@ variable "dev_default_node_pool" {
   default = {
     name                          = "default"
     vm_size                       = "Standard_D4ads_v5"
-    node_count                    = 1
+    node_count                    = 2
+    max_pods                      = 20
     node_public_ip_enabled        = false
     temporary_name_for_rotation   = "tmpdev"
     drain_timeout_in_minutes      = 0
     max_surge                     = "10%"
     node_soak_duration_in_minutes = 0
+  }
+
+  validation {
+    condition     = var.dev_default_node_pool.max_pods >= 10 && var.dev_default_node_pool.max_pods <= 20
+    error_message = "dev_default_node_pool.max_pods must be between 10 and 20 to fit the approved /25 flat AKS subnet design."
+  }
+
+  validation {
+    condition     = var.dev_default_node_pool.node_count >= 1 && var.dev_default_node_pool.node_count <= 4
+    error_message = "dev_default_node_pool.node_count must be between 1 and 4 to fit the approved /25 flat AKS subnet design."
+  }
+
+  validation {
+    condition     = var.dev_default_node_pool.node_count * var.dev_default_node_pool.max_pods > 30
+    error_message = "dev_default_node_pool.node_count multiplied by max_pods must be greater than 30 to satisfy AKS agent pool requirements."
   }
 }
 
@@ -139,6 +156,7 @@ variable "prod_default_node_pool" {
     name                          = string
     vm_size                       = string
     node_count                    = number
+    max_pods                      = number
     node_public_ip_enabled        = bool
     temporary_name_for_rotation   = string
     drain_timeout_in_minutes      = number
@@ -149,11 +167,27 @@ variable "prod_default_node_pool" {
     name                          = "default"
     vm_size                       = "Standard_E4ads_v5"
     node_count                    = 3
+    max_pods                      = 20
     node_public_ip_enabled        = false
     temporary_name_for_rotation   = "tmpprod"
     drain_timeout_in_minutes      = 0
     max_surge                     = "10%"
     node_soak_duration_in_minutes = 0
+  }
+
+  validation {
+    condition     = var.prod_default_node_pool.max_pods >= 10 && var.prod_default_node_pool.max_pods <= 20
+    error_message = "prod_default_node_pool.max_pods must be between 10 and 20 to fit the approved /25 flat AKS subnet design."
+  }
+
+  validation {
+    condition     = var.prod_default_node_pool.node_count >= 1 && var.prod_default_node_pool.node_count <= 4
+    error_message = "prod_default_node_pool.node_count must be between 1 and 4 to fit the approved /25 flat AKS subnet design."
+  }
+
+  validation {
+    condition     = var.prod_default_node_pool.node_count * var.prod_default_node_pool.max_pods > 30
+    error_message = "prod_default_node_pool.node_count multiplied by max_pods must be greater than 30 to satisfy AKS agent pool requirements."
   }
 }
 
@@ -170,10 +204,10 @@ variable "dev_network_profile" {
   })
   default = {
     network_plugin      = "azure"
-    network_plugin_mode = "overlay"
+    network_plugin_mode = null
     network_data_plane  = "cilium"
     network_policy      = "cilium"
-    pod_cidr            = "10.247.88.0/22"
+    pod_cidr            = null
     service_cidr        = "10.247.84.0/24"
     dns_service_ip      = "10.247.84.10"
   }
@@ -192,10 +226,10 @@ variable "prod_network_profile" {
   })
   default = {
     network_plugin      = "azure"
-    network_plugin_mode = "overlay"
+    network_plugin_mode = null
     network_data_plane  = "cilium"
     network_policy      = "cilium"
-    pod_cidr            = "10.247.92.0/22"
+    pod_cidr            = null
     service_cidr        = "10.247.85.0/24"
     dns_service_ip      = "10.247.85.10"
   }
