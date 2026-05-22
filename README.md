@@ -110,10 +110,8 @@ must keep this exact Azure-required subnet name.
 
 AKS uses single-subnet Azure CNI flat networking. AKS nodes and pods consume IPs
 from the AKS subnet, so the `/25` AKS subnets intentionally use `max_pods = 20`.
-This supports the current prod shape of three nodes and a practical four-node
-ceiling with one upgrade surge. Service CIDRs remain cluster ranges and must not
-overlap with campus/on-premises routes, peered VNets, VPN ranges, or other AKS
-clusters.
+Service CIDRs remain cluster ranges and must not overlap with
+campus/on-premises routes, peered VNets, VPN ranges, or other AKS clusters.
 
 ## Network Objects
 
@@ -236,7 +234,7 @@ prod AKS source         = 10.247.83.128/25
 
 With single-subnet Azure CNI flat networking, AKS nodes and pods use IPs from
 the AKS subnet. On-prem firewall policy and return routing should therefore use
-the AKS subnet CIDRs above, not a separate pod CIDR.
+the AKS subnet CIDRs above.
 
 ## VPN Components
 
@@ -374,16 +372,6 @@ prod max pods   = 20
 ```
 
 AKS API access is restricted by `authorized_ip_ranges`.
-
-Single-subnet flat AKS `/25` capacity examples:
-
-```text
-3 nodes + 1 surge, max_pods 20 = 84 IPs
-4 nodes + 1 surge, max_pods 20 = 105 IPs
-```
-
-A `/25` has 128 total IP addresses, with five reserved by Azure. Treat four
-nodes as the practical ceiling with the current `max_pods = 20` setting.
 
 ## PostgreSQL And Key Vault
 
