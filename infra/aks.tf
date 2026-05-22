@@ -28,13 +28,11 @@ resource "azurerm_kubernetes_cluster" "dev_aks_cluster" {
   }
 
   network_profile {
-    network_plugin      = var.dev_network_profile.network_plugin
-    network_plugin_mode = var.dev_network_profile.network_plugin_mode
-    network_data_plane  = var.dev_network_profile.network_data_plane
-    network_policy      = var.dev_network_profile.network_policy
-    pod_cidr            = var.dev_network_profile.pod_cidr
-    service_cidr        = var.dev_network_profile.service_cidr
-    dns_service_ip      = var.dev_network_profile.dns_service_ip
+    network_plugin     = var.dev_network_profile.network_plugin
+    network_data_plane = var.dev_network_profile.network_data_plane
+    network_policy     = var.dev_network_profile.network_policy
+    service_cidr       = var.dev_network_profile.service_cidr
+    dns_service_ip     = var.dev_network_profile.dns_service_ip
   }
 
   api_server_access_profile {
@@ -112,13 +110,11 @@ resource "azurerm_kubernetes_cluster" "prod_aks_cluster" {
   }
 
   network_profile {
-    network_plugin      = var.prod_network_profile.network_plugin
-    network_plugin_mode = var.prod_network_profile.network_plugin_mode
-    network_data_plane  = var.prod_network_profile.network_data_plane
-    network_policy      = var.prod_network_profile.network_policy
-    pod_cidr            = var.prod_network_profile.pod_cidr
-    service_cidr        = var.prod_network_profile.service_cidr
-    dns_service_ip      = var.prod_network_profile.dns_service_ip
+    network_plugin     = var.prod_network_profile.network_plugin
+    network_data_plane = var.prod_network_profile.network_data_plane
+    network_policy     = var.prod_network_profile.network_policy
+    service_cidr       = var.prod_network_profile.service_cidr
+    dns_service_ip     = var.prod_network_profile.dns_service_ip
   }
 
   api_server_access_profile {

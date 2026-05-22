@@ -169,119 +169,112 @@ have NSGs attached.
 
 ## Hybrid Connectivity
 
-The target pattern is hub-and-spoke S2S connectivity:
+The target hybrid pattern is a hub-and-spoke site-to-site VPN. Azure VPN
+termination lives only in the shared hub VNet; dev and prod reach on-premises
+through VNet peering with gateway transit.
 
 ```text
-On-premises Palo Alto HA pair
-  -> IPsec/IKEv2 site-to-site VPN
-  -> shared Grouper AKS hub VNet
-  -> hub/spoke VNet peering with gateway transit
-  -> dev/prod AKS subnets
-  -> Grouper pods
+Grouper pods
+  -> dev/prod AKS subnet
+  -> dev/prod spoke VNet
+  -> VNet peering with remote gateway enabled
+  -> shared hub VNet GatewaySubnet
+  -> Azure VPN Gateway
+  -> IPsec/IKEv2 S2S tunnel
+  -> on-prem Palo Alto HA pair
+  -> on-prem database host/prefixes
 ```
 
-The hub VNet and peerings are managed by default. The VPN Gateway and tunnel are
-created only when explicitly enabled. Example `infra/terraform.tfvars` values:
+Current status:
 
-```hcl
-enable_grouper_aks_s2s_vpn              = true
-onprem_palo_alto_public_ip              = "x.x.x.x"
-prod_onprem_database_cidrs              = ["137.145.22.0/24"]
-
-# Optional. Leave null to generate a 64-character PSK.
-grouper_aks_s2s_onprem_shared_key       = null
+```text
+Hub VNet                         = managed by Terraform
+Hub GatewaySubnet                = managed by Terraform
+Hub/spoke VNet peerings          = managed by Terraform
+VPN Gateway resources            = modeled in Terraform, disabled by default
+VPN tunnel                       = modeled in Terraform, disabled by default
+enable_grouper_aks_s2s_vpn       = false by default
 ```
 
-Leave `enable_grouper_aks_s2s_vpn` unset, or set it to `false`, if you do not
-want Terraform to create billable Azure VPN Gateway resources.
+Do not create the Virtual Network Gateway manually. The gateway, public IP,
+local network gateway, VPN connection, IPsec policy, shared key, and peering
+gateway-transit flags are all represented in Terraform. They are created only
+when `enable_grouper_aks_s2s_vpn = true`.
+
+## S2S VPN Design
+
+Azure side:
+
+```text
+Hub resource group      = Grouper-AKS-Hub
+Hub VNet                = grouper-aks-hub-tf-vnet
+Hub VNet CIDR           = 10.247.86.0/24
+Gateway subnet name     = GatewaySubnet
+Gateway subnet CIDR     = 10.247.86.0/26
+Gateway type            = Vpn
+VPN type                = RouteBased
+Gateway SKU             = VpnGw1AZ
+Active-active           = false
+BGP                     = disabled
+Routing model           = static
+Connection protocol     = IKEv2
+```
+
+On-premises side:
+
+```text
+Palo Alto public IP     = 137.145.10.114
+On-prem reachable CIDR  = 137.145.22.135/32
+```
+
+Azure workload source ranges that the network team should allow and route back:
+
+```text
+dev AKS source          = 10.247.81.128/25
+prod AKS source         = 10.247.83.128/25
+```
 
 With single-subnet Azure CNI flat networking, AKS nodes and pods use IPs from
-the AKS subnet. Palo Alto policy and on-premises return routing should allow
-these Azure source CIDRs:
+the AKS subnet. On-prem firewall policy and return routing should therefore use
+the AKS subnet CIDRs above, not a separate pod CIDR.
+
+## VPN Components
+
+When `enable_grouper_aks_s2s_vpn = true`, Terraform creates these resources:
 
 ```text
-dev AKS source  = 10.247.81.128/25
-prod AKS source = 10.247.83.128/25
-```
-
-Database ports are not needed to create the VPN tunnel, but they are required
-for Palo Alto policy, database firewall policy, and future Azure NSG rules.
-
-## VPN Objects And Inputs
-
-```text
-Azure VPN Gateway
-  Azure-managed VPN endpoint in the shared hub VNet. This is the Azure side of
-  the IPsec tunnel.
-
 VPN Gateway public IP
-  Static Azure public IP attached to the Azure VPN Gateway. This is the IP the
-  Palo Alto will connect to from on-prem.
+  Static Standard public IP in Azure. This is the public Azure endpoint that
+  the on-prem Palo Alto connects to.
+
+Azure Virtual Network Gateway
+  Azure VPN gateway deployed into the hub VNet GatewaySubnet. This is the Azure
+  tunnel endpoint. The subnet must be named exactly GatewaySubnet.
 
 Local Network Gateway
-  Azure representation of the on-premises Palo Alto side. It stores the Palo
-  Alto public IP and the on-prem database CIDRs reachable behind it.
+  Azure representation of the on-prem Palo Alto side. It stores the Palo Alto
+  public IP and the on-prem address spaces reachable behind the tunnel.
 
-VPN connection
-  Azure IPsec connection between the Azure VPN Gateway and Local Network
-  Gateway. This is where IKEv2, IPsec policy, and the shared key are applied.
+VPN Gateway Connection
+  IPsec/IKEv2 connection between the Azure VPN Gateway and Local Network
+  Gateway. This object holds the shared key and explicit IPsec policy.
+
+Hub-to-spoke peering gateway transit
+  Hub-to-dev and hub-to-prod peerings set allow_gateway_transit = true.
+
+Spoke-to-hub remote gateway use
+  Dev-to-hub and prod-to-hub peerings set use_remote_gateways = true.
 ```
 
-Required VPN input values:
+VPN resource names:
 
 ```text
-enable_grouper_aks_s2s_vpn
-  Set to true only when you are ready to create billable Azure VPN Gateway
-  resources.
-
-onprem_palo_alto_public_ip
-  Public floating IP of the on-prem Palo Alto HA pair used for IPsec
-  termination. This is not the database subnet and not an Azure IP.
-
-prod_onprem_database_cidrs
-  On-premises database subnet prefixes reachable through the tunnel. Current
-  known value: 137.145.22.0/24.
-
-grouper_aks_s2s_onprem_shared_key
-  Optional PSK. Leave null to let Terraform generate it and write it to both
-  existing Key Vaults.
-```
-
-## VPN Gateway Defaults
-
-The shared Grouper AKS VPN Gateway is disabled by default. When enabled,
-Terraform uses:
-
-```text
-gateway SKU      = VpnGw1AZ
-VPN type         = RouteBased
-protocol         = IKEv2
-routing          = static
-BGP              = disabled
-active-active    = disabled
-public IP SKU    = Standard
-public IP zones  = 1, 2, 3
-GatewaySubnet    = 10.247.86.0/26
-```
-
-Override the SKU only if throughput or connection requirements change:
-
-```hcl
-grouper_aks_vpn_gateway_sku = "VpnGw1AZ"
-```
-
-## VPN Object Names
-
-VPN resources use the existing Azure inventory style:
-`AZR-prod-<Workload>-VNG`.
-
-```text
-prefix              = AZR-prod-GrouperAKS
-VPN gateway         = AZR-prod-GrouperAKS-VNG
-VPN gateway PIP     = AZR-prod-GrouperAKS-VNG-PIP
-Palo Alto LNG       = AZR-prod-GrouperAKS-PaloAlto-LNG
-VPN connection      = AZR-prod-GrouperAKS-PaloAlto-CON
-IP configuration    = AZR-prod-GrouperAKS-VNG-IPConfig
+name prefix          = AZR-prod-GrouperAKS
+VPN gateway          = AZR-prod-GrouperAKS-VNG
+VPN gateway PIP      = AZR-prod-GrouperAKS-VNG-PIP
+Local network gw     = AZR-prod-GrouperAKS-PaloAlto-LNG
+VPN connection       = AZR-prod-GrouperAKS-PaloAlto-CON
+IP configuration     = AZR-prod-GrouperAKS-VNG-IPConfig
 ```
 
 The prefix is controlled by:
@@ -290,32 +283,69 @@ The prefix is controlled by:
 grouper_aks_connectivity_resource_name_prefix = "AZR-prod-GrouperAKS"
 ```
 
-## VPN Shared Key
+## VPN Inputs
 
-When the VPN is enabled, Terraform writes only the VPN pre-shared key to both
-existing Key Vaults:
+The default input values are:
+
+```hcl
+enable_grouper_aks_s2s_vpn              = false
+onprem_palo_alto_public_ip              = "137.145.10.114"
+prod_onprem_database_cidrs              = ["137.145.22.135/32"]
+grouper_aks_vpn_gateway_sku             = "VpnGw1AZ"
+grouper_aks_s2s_onprem_shared_key       = null
+```
+
+Enable the VPN only when the network team is ready for Terraform to create
+billable VPN Gateway resources:
+
+```hcl
+enable_grouper_aks_s2s_vpn = true
+```
+
+The VPN pre-shared key behavior is:
+
+- If `grouper_aks_s2s_onprem_shared_key` is `null`, Terraform generates a
+  64-character alphanumeric key.
+- If a value is supplied, Terraform uses the supplied key.
+- When VPN is enabled, Terraform writes the key to both existing Key Vaults:
 
 ```text
 kv-dev-grouper  / grouper-aks-s2s-vpn-shared-key
 kv-prod-grouper / grouper-aks-s2s-vpn-shared-key
 ```
 
-The Terraform variable is:
+Treat Terraform state and saved plan files as sensitive. State will contain the
+generated PostgreSQL passwords and, when VPN is enabled, the VPN shared key.
 
-```hcl
-grouper_aks_s2s_onprem_shared_key = null
+## IPsec Policy
+
+Terraform applies this explicit IPsec policy to the Azure VPN connection:
+
+```text
+DH group           = DHGroup14
+IKE encryption     = AES256
+IKE integrity      = SHA256
+IPsec encryption   = AES256
+IPsec integrity    = SHA256
+PFS group          = PFS14
+SA data size       = 102400000 KB
+SA lifetime        = 27000 seconds
 ```
 
-Behavior:
+The Palo Alto Phase 1 and Phase 2 settings must match these values.
 
-- If the value is `null`, Terraform generates a 64-character alphanumeric PSK.
-- If a value is supplied, Terraform uses that supplied PSK.
-- Terraform updates the Azure VPN connection shared key and both Key Vault
-  secrets.
-- Key Vault does not rotate this PSK automatically.
-- Non-secret values such as the Azure VPN Gateway public IP, Palo Alto public
-  IP, and `prod_onprem_database_cidrs` stay in Terraform configuration,
-  Terraform output, and Azure resource properties.
+## Network Team Checklist
+
+Before enabling `enable_grouper_aks_s2s_vpn`, confirm:
+
+- Palo Alto tunnel endpoint public IP is `137.145.10.114`.
+- On-prem route/policy should expose `137.145.22.135/32` to Azure.
+- On-prem return routing exists for `10.247.81.128/25` and
+  `10.247.83.128/25`.
+- Palo Alto policies allow the required database/application ports between the
+  AKS source subnets and `137.145.22.135/32`.
+- Palo Alto IKE/IPsec parameters match the policy above.
+- The team is ready for Terraform to create Azure VPN Gateway billing resources.
 
 ## AKS
 
@@ -323,7 +353,7 @@ Both clusters use:
 
 ```text
 network plugin      = azure
-network plugin mode = unset / node subnet
+network plugin mode = not set
 network data plane  = cilium
 network policy      = cilium
 private API server  = false

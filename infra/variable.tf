@@ -194,44 +194,36 @@ variable "prod_default_node_pool" {
 variable "dev_network_profile" {
   description = "Network profile configuration for the dev Grouper AKS cluster."
   type = object({
-    network_plugin      = string
-    network_plugin_mode = string
-    network_data_plane  = string
-    network_policy      = string
-    pod_cidr            = string
-    service_cidr        = string
-    dns_service_ip      = string
+    network_plugin     = string
+    network_data_plane = string
+    network_policy     = string
+    service_cidr       = string
+    dns_service_ip     = string
   })
   default = {
-    network_plugin      = "azure"
-    network_plugin_mode = null
-    network_data_plane  = "cilium"
-    network_policy      = "cilium"
-    pod_cidr            = null
-    service_cidr        = "10.247.84.0/24"
-    dns_service_ip      = "10.247.84.10"
+    network_plugin     = "azure"
+    network_data_plane = "cilium"
+    network_policy     = "cilium"
+    service_cidr       = "10.247.84.0/24"
+    dns_service_ip     = "10.247.84.10"
   }
 }
 
 variable "prod_network_profile" {
   description = "Network profile configuration for the prod Grouper AKS cluster."
   type = object({
-    network_plugin      = string
-    network_plugin_mode = string
-    network_data_plane  = string
-    network_policy      = string
-    pod_cidr            = string
-    service_cidr        = string
-    dns_service_ip      = string
+    network_plugin     = string
+    network_data_plane = string
+    network_policy     = string
+    service_cidr       = string
+    dns_service_ip     = string
   })
   default = {
-    network_plugin      = "azure"
-    network_plugin_mode = null
-    network_data_plane  = "cilium"
-    network_policy      = "cilium"
-    pod_cidr            = null
-    service_cidr        = "10.247.85.0/24"
-    dns_service_ip      = "10.247.85.10"
+    network_plugin     = "azure"
+    network_data_plane = "cilium"
+    network_policy     = "cilium"
+    service_cidr       = "10.247.85.0/24"
+    dns_service_ip     = "10.247.85.10"
   }
 }
 
@@ -370,13 +362,13 @@ variable "grouper_aks_vpn_gateway_sku" {
 variable "onprem_palo_alto_public_ip" {
   description = "Public floating IP address of the on-premises Palo Alto HA pair used for IPsec termination."
   type        = string
-  default     = null
+  default     = "137.145.10.114"
 }
 
 variable "prod_onprem_database_cidrs" {
   description = "Production on-premises database CIDR prefixes reachable over the Grouper AKS S2S VPN tunnel. For static routing, these are the local network gateway address spaces."
   type        = list(string)
-  default     = []
+  default     = ["137.145.22.135/32"]
 }
 
 variable "grouper_aks_s2s_onprem_shared_key" {
