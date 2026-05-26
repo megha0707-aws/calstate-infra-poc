@@ -8,6 +8,7 @@ resource "azurerm_kubernetes_cluster" "dev_aks_cluster" {
 
   private_cluster_enabled = false
   oidc_issuer_enabled     = true
+  
   sku_tier                = var.dev_aks_sku_tier
 
   default_node_pool {
