@@ -1,13 +1,13 @@
 variable "subscription_id" {
   description = "Azure subscription ID for the Grouper AKS deployment."
   type        = string
-  default     = "f4f3ec7d-9d6f-4752-bdcc-440ed90734fe"
+  default     = "91ea5a42-5e9b-4c0c-a766-ea2a2aaa3ace"
 }
 
 variable "location" {
   description = "Azure region for dev and prod Grouper infrastructure."
   type        = string
-  default     = "westus2"
+  default     = "eastus"
 }
 
 variable "deployment_name" {
