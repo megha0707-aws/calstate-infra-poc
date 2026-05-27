@@ -12,7 +12,7 @@ This stack manages:
   infra hosts, private endpoints, and AKS nodes/pods.
 - Shared Grouper AKS hub VNet with `GatewaySubnet` and `AzureBastionSubnet`.
 - Hub/spoke VNet peerings between the hub, dev, and prod VNets.
-- Optional Azure VPN Gateway S2S resources for Palo Alto IPsec termination.
+- Azure VPN Gateway S2S resources for Palo Alto IPsec termination.
 - PostgreSQL Flexible Servers with private DNS.
 - Baseline NSGs for Application Gateway and PostgreSQL subnets.
 - AKS clusters using single-subnet Azure CNI flat networking and Cilium.
@@ -20,7 +20,7 @@ This stack manages:
 - Log Analytics workspaces.
 - Azure Monitor workspaces, Managed Prometheus, and Managed Grafana.
 - PostgreSQL secrets in existing Key Vaults.
-- Optional VPN pre-shared key in existing Key Vaults.
+- VPN pre-shared key in existing Key Vaults.
 
 This stack does **not** currently manage:
 
@@ -72,8 +72,7 @@ state key        = dcs-apps.tfstate
 ```
 
 Treat state and saved plan files as sensitive. State includes generated
-PostgreSQL admin passwords. If S2S VPN is enabled, state also includes the VPN
-pre-shared key.
+PostgreSQL admin passwords and the S2S VPN pre-shared key.
 
 ## Network Plan
 
@@ -189,15 +188,23 @@ Current status:
 Hub VNet                         = managed by Terraform
 Hub GatewaySubnet                = managed by Terraform
 Hub/spoke VNet peerings          = managed by Terraform
-VPN Gateway resources            = modeled in Terraform, disabled by default
-VPN tunnel                       = modeled in Terraform, disabled by default
-enable_grouper_aks_s2s_vpn       = false by default
+VPN Gateway resources            = deployed by Terraform
+VPN connection resource          = deployed by Terraform
+enable_grouper_aks_s2s_vpn       = true by default
+Azure provisioning status         = Succeeded
+Azure connection status           = Unknown
+Tunnel byte counters              = ingress 0 / egress 0
+Last verified                     = 2026-05-26
 ```
 
 Do not create the Virtual Network Gateway manually. The gateway, public IP,
 local network gateway, VPN connection, IPsec policy, shared key, and peering
-gateway-transit flags are all represented in Terraform. They are created only
-when `enable_grouper_aks_s2s_vpn = true`.
+gateway-transit flags are all represented in Terraform.
+
+The Azure resources are provisioned, but the tunnel has not yet been verified
+as passing traffic. Azure currently reports the connection status as `Unknown`
+with zero ingress and egress bytes, which usually means the on-premises peer has
+not completed IKE/IPsec negotiation or no test traffic has passed yet.
 
 ## S2S VPN Design
 
@@ -212,6 +219,9 @@ Gateway subnet CIDR     = 10.247.86.0/26
 Gateway type            = Vpn
 VPN type                = RouteBased
 Gateway SKU             = VpnGw1AZ
+VPN gateway name        = AZR-prod-GrouperAKS-VNG
+VPN gateway public IP   = 48.202.16.217
+VPN gateway PIP name    = AZR-prod-GrouperAKS-VNG-PIP
 Active-active           = false
 BGP                     = disabled
 Routing model           = static
@@ -223,6 +233,8 @@ On-premises side:
 ```text
 Palo Alto public IP     = 137.145.10.114
 On-prem reachable CIDR  = 137.145.22.135/32
+Local network gateway   = AZR-prod-GrouperAKS-PaloAlto-LNG
+VPN connection          = AZR-prod-GrouperAKS-PaloAlto-CON
 ```
 
 Azure workload source ranges that the network team should allow and route back:
@@ -270,9 +282,32 @@ VPN resource names:
 name prefix          = AZR-prod-GrouperAKS
 VPN gateway          = AZR-prod-GrouperAKS-VNG
 VPN gateway PIP      = AZR-prod-GrouperAKS-VNG-PIP
+VPN gateway public IP = 48.202.16.217
 Local network gw     = AZR-prod-GrouperAKS-PaloAlto-LNG
 VPN connection       = AZR-prod-GrouperAKS-PaloAlto-CON
 IP configuration     = AZR-prod-GrouperAKS-VNG-IPConfig
+```
+
+Live Azure status:
+
+```text
+VPN gateway provisioning state       = Succeeded
+VPN public IP provisioning state     = Succeeded
+Local network gateway state          = Succeeded
+VPN connection provisioning state    = Succeeded
+VPN connection status                = Unknown
+Ingress bytes transferred            = 0
+Egress bytes transferred             = 0
+Last verified                        = 2026-05-26
+```
+
+Live peering gateway transit status:
+
+```text
+hub -> dev   allow_gateway_transit = true,  use_remote_gateways = false
+dev -> hub   allow_gateway_transit = false, use_remote_gateways = true
+hub -> prod  allow_gateway_transit = true,  use_remote_gateways = false
+prod -> hub  allow_gateway_transit = false, use_remote_gateways = true
 ```
 
 The prefix is controlled by:
@@ -286,15 +321,15 @@ grouper_aks_connectivity_resource_name_prefix = "AZR-prod-GrouperAKS"
 The default input values are:
 
 ```hcl
-enable_grouper_aks_s2s_vpn              = false
+enable_grouper_aks_s2s_vpn              = true
 onprem_palo_alto_public_ip              = "137.145.10.114"
 prod_onprem_database_cidrs              = ["137.145.22.135/32"]
 grouper_aks_vpn_gateway_sku             = "VpnGw1AZ"
 grouper_aks_s2s_onprem_shared_key       = null
 ```
 
-Enable the VPN only when the network team is ready for Terraform to create
-billable VPN Gateway resources:
+Keep the VPN enabled only while the environment should retain billable VPN
+Gateway resources:
 
 ```hcl
 enable_grouper_aks_s2s_vpn = true
@@ -305,15 +340,15 @@ The VPN pre-shared key behavior is:
 - If `grouper_aks_s2s_onprem_shared_key` is `null`, Terraform generates a
   64-character alphanumeric key.
 - If a value is supplied, Terraform uses the supplied key.
-- When VPN is enabled, Terraform writes the key to both existing Key Vaults:
+- Terraform writes the key to both existing Key Vaults:
 
 ```text
 kv-dev-grouper  / grouper-aks-s2s-vpn-shared-key
 kv-prod-grouper / grouper-aks-s2s-vpn-shared-key
 ```
 
-Treat Terraform state and saved plan files as sensitive. State will contain the
-generated PostgreSQL passwords and, when VPN is enabled, the VPN shared key.
+Treat Terraform state and saved plan files as sensitive. State contains the
+generated PostgreSQL passwords and VPN shared key.
 
 ## IPsec Policy
 
@@ -334,7 +369,7 @@ The Palo Alto Phase 1 and Phase 2 settings must match these values.
 
 ## Network Team Checklist
 
-Before enabling `enable_grouper_aks_s2s_vpn`, confirm:
+For the deployed S2S VPN to become operational, confirm:
 
 - Palo Alto tunnel endpoint public IP is `137.145.10.114`.
 - On-prem route/policy should expose `137.145.22.135/32` to Azure.
@@ -343,7 +378,7 @@ Before enabling `enable_grouper_aks_s2s_vpn`, confirm:
 - Palo Alto policies allow the required database/application ports between the
   AKS source subnets and `137.145.22.135/32`.
 - Palo Alto IKE/IPsec parameters match the policy above.
-- The team is ready for Terraform to create Azure VPN Gateway billing resources.
+- The on-prem peer is configured with the Azure VPN public IP `48.202.16.217`.
 
 ## AKS
 
@@ -470,7 +505,7 @@ Confirm these prerequisites:
 - The Terraform-running identity can write Key Vault secrets.
 - Required Azure resource providers are registered because provider
   auto-registration is disabled.
-- Before enabling S2S VPN, confirm:
+- For S2S VPN validation, confirm:
   - Palo Alto floating public IP.
   - Production on-premises database CIDRs.
   - Database ports.
@@ -483,7 +518,7 @@ infra/backend.tf    backend configuration
 infra/variable.tf   variables and defaults
 infra/local.tf      naming and CIDR allocations
 infra/network.tf    VNets, subnets, and peerings
-infra/vpn.tf        optional S2S VPN resources
+infra/vpn.tf        S2S VPN resources
 infra/key_vault.tf  Key Vault secret writes
 ```
 

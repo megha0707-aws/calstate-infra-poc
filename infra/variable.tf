@@ -328,7 +328,7 @@ variable "prod_key_vault_name" {
 variable "enable_grouper_aks_s2s_vpn" {
   description = "Whether to create the shared Grouper AKS hub VPN Gateway, local network gateway, and S2S connection to the on-premises Palo Alto firewall."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "grouper_aks_connectivity_resource_name_prefix" {
