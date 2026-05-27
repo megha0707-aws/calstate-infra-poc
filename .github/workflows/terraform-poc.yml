@@ -42,10 +42,9 @@ jobs:
         run: |
           terraform import -var-file="poc.tfvars" azurerm_resource_group.dev /subscriptions/91ea5a42-5e9b-4c0c-a766-ea2a2aaa3ace/resourceGroups/Grouper-Dev || true
           terraform import -var-file="poc.tfvars" azurerm_resource_group.prod /subscriptions/91ea5a42-5e9b-4c0c-a766-ea2a2aaa3ace/resourceGroups/Grouper-Prod || true
-          terraform import -var-file="poc.tfvars" azurerm_resource_group.hub /subscriptions/91ea5a42-5e9b-4c0c-a766-ea2a2aaa3ace/resourceGroups/Grouper-AKS-Hub || true
 
       - name: Terraform Validate
-        run: terraform validate -var-file="poc.tfvars"
+        run: terraform validate
 
       - name: Terraform Plan
         run: terraform plan -var-file="poc.tfvars"
