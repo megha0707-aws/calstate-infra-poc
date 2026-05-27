@@ -14,9 +14,21 @@ jobs:
       run:
         working-directory: infra
 
+    env:
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_ACCESS_KEY: ${{ secrets.ARM_ACCESS_KEY }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -24,55 +36,19 @@ jobs:
           terraform_version: 1.6.6
 
       - name: Terraform Init
-        env:
-          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        run: terraform init
+
+      - name: Import existing resource groups
         run: |
-          terraform init \
-            -backend-config="resource_group_name=Grouper" \
-            -backend-config="storage_account_name=groupertfstatepoc01" \
-            -backend-config="container_name=terraform" \
-            -backend-config="key=dcs-apps.tfstate" \
-            -backend-config="use_azuread_auth=true" \
-            -backend-config="tenant_id=${{ secrets.AZURE_TENANT_ID }}" \
-            -backend-config="subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
-            -backend-config="client_id=${{ secrets.AZURE_CLIENT_ID }}" \
-            -backend-config="client_secret=${{ secrets.AZURE_CLIENT_SECRET }}"
+          terraform import azurerm_resource_group.dev /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/Grouper-Dev || true
+          terraform import azurerm_resource_group.prod /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/Grouper-Prod || true
+          terraform import azurerm_resource_group.hub /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/Grouper-Hub || true
 
       - name: Terraform Validate
-        env:
-          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
         run: terraform validate
 
-      - name: Terraform Import Existing Resource Groups
-        env:
-          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-        run: |
-          terraform import azurerm_resource_group.dev \
-            /subscriptions/91ea5a42-5e9b-4c0c-a766-ea2a2aaa3ace/resourceGroups/Grouper-Dev || true
-          terraform import azurerm_resource_group.prod \
-            /subscriptions/91ea5a42-5e9b-4c0c-a766-ea2a2aaa3ace/resourceGroups/Grouper-Prod || true
-
       - name: Terraform Plan
-        env:
-          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
         run: terraform plan -var-file="poc.tfvars"
 
       - name: Terraform Apply
-        env:
-          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
         run: terraform apply -auto-approve -var-file="poc.tfvars"
