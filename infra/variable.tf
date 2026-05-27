@@ -397,7 +397,7 @@ variable "grouper_aks_s2s_ipsec_policy" {
     ipsec_encryption = "AES256"
     ipsec_integrity  = "SHA256"
     pfs_group        = "PFS14"
-    sa_datasize      = 102400000
+    sa_datasize      = 100663296
     sa_lifetime      = 27000
   }
 }

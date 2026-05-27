@@ -192,7 +192,7 @@ VPN Gateway resources            = deployed by Terraform
 VPN connection resource          = deployed by Terraform
 enable_grouper_aks_s2s_vpn       = true by default
 Azure provisioning status         = Succeeded
-Azure connection status           = Unknown
+Azure connection status           = Connected
 Tunnel byte counters              = ingress 0 / egress 0
 Last verified                     = 2026-05-26
 ```
@@ -201,10 +201,10 @@ Do not create the Virtual Network Gateway manually. The gateway, public IP,
 local network gateway, VPN connection, IPsec policy, shared key, and peering
 gateway-transit flags are all represented in Terraform.
 
-The Azure resources are provisioned, but the tunnel has not yet been verified
-as passing traffic. Azure currently reports the connection status as `Unknown`
-with zero ingress and egress bytes, which usually means the on-premises peer has
-not completed IKE/IPsec negotiation or no test traffic has passed yet.
+The Azure resources are provisioned and Azure currently reports the VPN
+connection status as `Connected`. Azure CLI still reports zero ingress and
+egress bytes, so perform an application or port test from AKS to the on-premises
+database to confirm workload traffic.
 
 ## S2S VPN Design
 
@@ -295,7 +295,7 @@ VPN gateway provisioning state       = Succeeded
 VPN public IP provisioning state     = Succeeded
 Local network gateway state          = Succeeded
 VPN connection provisioning state    = Succeeded
-VPN connection status                = Unknown
+VPN connection status                = Connected
 Ingress bytes transferred            = 0
 Egress bytes transferred             = 0
 Last verified                        = 2026-05-26
@@ -361,11 +361,15 @@ IKE integrity      = SHA256
 IPsec encryption   = AES256
 IPsec integrity    = SHA256
 PFS group          = PFS14
-SA data size       = 102400000 KB
+SA data size       = 100663296 KB (96 GB)
 SA lifetime        = 27000 seconds
 ```
 
-The Palo Alto Phase 1 and Phase 2 settings must match these values.
+The Palo Alto Phase 2 IPsec Crypto Profile should use ESP,
+`aes-256-cbc`, `sha256`, DH group `group14`, lifetime `27000` seconds,
+and lifesize `96 GB`. The Azure `PFS14` value maps to the Palo Alto IPsec
+Crypto Profile DH group `group14`. The Palo Alto Phase 1 IKE Crypto Profile
+must separately match the Azure IKE settings above.
 
 ## Network Team Checklist
 
