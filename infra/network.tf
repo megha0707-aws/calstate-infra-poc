@@ -14,6 +14,18 @@ resource "azurerm_subnet" "dev-appgw-tf-subnet" {
   resource_group_name  = azurerm_resource_group.dev.name
   virtual_network_name = azurerm_virtual_network.dev-tf-vnet.name
   address_prefixes     = [local.dev_appgw_cidr]
+ 
+  delegation {
+    name = "alb-delegation"
+ 
+    service_delegation {
+      name = "Microsoft.ServiceNetworking/TrafficControllers"
+ 
+      actions = [
+        "Microsoft.Network/virtualNetworks/subnets/join/action"
+      ]
+    }
+  }
 }
 
 resource "azurerm_subnet" "dev-psql-tf-subnet" {
@@ -77,6 +89,18 @@ resource "azurerm_subnet" "prod-appgw-tf-subnet" {
   resource_group_name  = azurerm_resource_group.prod.name
   virtual_network_name = azurerm_virtual_network.prod-tf-vnet.name
   address_prefixes     = [local.prod_appgw_cidr]
+ 
+  delegation {
+    name = "alb-delegation"
+ 
+    service_delegation {
+      name = "Microsoft.ServiceNetworking/TrafficControllers"
+ 
+      actions = [
+        "Microsoft.Network/virtualNetworks/subnets/join/action"
+      ]
+    }
+  }
 }
 
 resource "azurerm_subnet" "prod-psql-tf-subnet" {
