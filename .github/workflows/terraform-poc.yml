@@ -38,11 +38,6 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
-      - name: Import existing resource groups
-        run: |
-          terraform import -var-file="poc.tfvars" azurerm_resource_group.dev /subscriptions/91ea5a42-5e9b-4c0c-a766-ea2a2aaa3ace/resourceGroups/Grouper-Dev || true
-          terraform import -var-file="poc.tfvars" azurerm_resource_group.prod /subscriptions/91ea5a42-5e9b-4c0c-a766-ea2a2aaa3ace/resourceGroups/Grouper-Prod || true
-
       - name: Terraform Validate
         run: terraform validate
 
