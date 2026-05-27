@@ -1,89 +1,89 @@
-# Key Vaults are managed manually and referenced here so Terraform can write
-# the generated PostgreSQL connection details as secrets.
+# # Key Vaults are managed manually and referenced here so Terraform can write
+# # the generated PostgreSQL connection details as secrets.
 
-data "azurerm_key_vault" "dev" {
-  name                = var.dev_key_vault_name
-  resource_group_name = azurerm_resource_group.dev.name
-}
+# data "azurerm_key_vault" "dev" {
+#   name                = var.dev_key_vault_name
+#   resource_group_name = azurerm_resource_group.dev.name
+# }
 
-resource "azurerm_key_vault_secret" "dev_grouper_postgresql_admin_login" {
-  name         = "grouper-postgresql-admin-login"
-  value        = var.dev_grouper_postgresql.administrator_login
-  key_vault_id = data.azurerm_key_vault.dev.id
-  content_type = "text/plain"
-}
+# resource "azurerm_key_vault_secret" "dev_grouper_postgresql_admin_login" {
+#   name         = "grouper-postgresql-admin-login"
+#   value        = var.dev_grouper_postgresql.administrator_login
+#   key_vault_id = data.azurerm_key_vault.dev.id
+#   content_type = "text/plain"
+# }
 
-resource "azurerm_key_vault_secret" "dev_grouper_postgresql_admin_password" {
-  name         = "grouper-postgresql-admin-password"
-  value        = random_password.dev_grouper_postgresql_admin.result
-  key_vault_id = data.azurerm_key_vault.dev.id
-  content_type = "text/plain"
-}
+# resource "azurerm_key_vault_secret" "dev_grouper_postgresql_admin_password" {
+#   name         = "grouper-postgresql-admin-password"
+#   value        = random_password.dev_grouper_postgresql_admin.result
+#   key_vault_id = data.azurerm_key_vault.dev.id
+#   content_type = "text/plain"
+# }
 
-resource "azurerm_key_vault_secret" "dev_grouper_postgresql_host" {
-  name         = "grouper-postgresql-host"
-  value        = azurerm_postgresql_flexible_server.dev_grouper.fqdn
-  key_vault_id = data.azurerm_key_vault.dev.id
-  content_type = "text/plain"
-}
+# resource "azurerm_key_vault_secret" "dev_grouper_postgresql_host" {
+#   name         = "grouper-postgresql-host"
+#   value        = azurerm_postgresql_flexible_server.dev_grouper.fqdn
+#   key_vault_id = data.azurerm_key_vault.dev.id
+#   content_type = "text/plain"
+# }
 
-resource "azurerm_key_vault_secret" "dev_grouper_postgresql_database" {
-  name         = "grouper-postgresql-database"
-  value        = azurerm_postgresql_flexible_server_database.dev_grouper.name
-  key_vault_id = data.azurerm_key_vault.dev.id
-  content_type = "text/plain"
-}
+# resource "azurerm_key_vault_secret" "dev_grouper_postgresql_database" {
+#   name         = "grouper-postgresql-database"
+#   value        = azurerm_postgresql_flexible_server_database.dev_grouper.name
+#   key_vault_id = data.azurerm_key_vault.dev.id
+#   content_type = "text/plain"
+# }
 
-data "azurerm_key_vault" "prod" {
-  name                = var.prod_key_vault_name
-  resource_group_name = azurerm_resource_group.prod.name
-}
+# data "azurerm_key_vault" "prod" {
+#   name                = var.prod_key_vault_name
+#   resource_group_name = azurerm_resource_group.prod.name
+# }
 
-resource "azurerm_key_vault_secret" "prod_grouper_postgresql_admin_login" {
-  name         = "grouper-postgresql-admin-login"
-  value        = var.prod_grouper_postgresql.administrator_login
-  key_vault_id = data.azurerm_key_vault.prod.id
-  content_type = "text/plain"
-}
+# resource "azurerm_key_vault_secret" "prod_grouper_postgresql_admin_login" {
+#   name         = "grouper-postgresql-admin-login"
+#   value        = var.prod_grouper_postgresql.administrator_login
+#   key_vault_id = data.azurerm_key_vault.prod.id
+#   content_type = "text/plain"
+# }
 
-resource "azurerm_key_vault_secret" "prod_grouper_postgresql_admin_password" {
-  name         = "grouper-postgresql-admin-password"
-  value        = random_password.prod_grouper_postgresql_admin.result
-  key_vault_id = data.azurerm_key_vault.prod.id
-  content_type = "text/plain"
-}
+# resource "azurerm_key_vault_secret" "prod_grouper_postgresql_admin_password" {
+#   name         = "grouper-postgresql-admin-password"
+#   value        = random_password.prod_grouper_postgresql_admin.result
+#   key_vault_id = data.azurerm_key_vault.prod.id
+#   content_type = "text/plain"
+# }
 
-resource "azurerm_key_vault_secret" "prod_grouper_postgresql_host" {
-  name         = "grouper-postgresql-host"
-  value        = azurerm_postgresql_flexible_server.prod_grouper.fqdn
-  key_vault_id = data.azurerm_key_vault.prod.id
-  content_type = "text/plain"
-}
+# resource "azurerm_key_vault_secret" "prod_grouper_postgresql_host" {
+#   name         = "grouper-postgresql-host"
+#   value        = azurerm_postgresql_flexible_server.prod_grouper.fqdn
+#   key_vault_id = data.azurerm_key_vault.prod.id
+#   content_type = "text/plain"
+# }
 
-resource "azurerm_key_vault_secret" "prod_grouper_postgresql_database" {
-  name         = "grouper-postgresql-database"
-  value        = azurerm_postgresql_flexible_server_database.prod_grouper.name
-  key_vault_id = data.azurerm_key_vault.prod.id
-  content_type = "text/plain"
-}
+# resource "azurerm_key_vault_secret" "prod_grouper_postgresql_database" {
+#   name         = "grouper-postgresql-database"
+#   value        = azurerm_postgresql_flexible_server_database.prod_grouper.name
+#   key_vault_id = data.azurerm_key_vault.prod.id
+#   content_type = "text/plain"
+# }
 
-# The shared Grouper AKS S2S VPN pre-shared key is written to both existing
-# environment vaults because the hub VPN is shared by dev and prod AKS workloads.
+# # The shared Grouper AKS S2S VPN pre-shared key is written to both existing
+# # environment vaults because the hub VPN is shared by dev and prod AKS workloads.
 
-resource "azurerm_key_vault_secret" "dev_grouper_aks_s2s_onprem_shared_key" {
-  count = var.enable_grouper_aks_s2s_vpn ? 1 : 0
+# resource "azurerm_key_vault_secret" "dev_grouper_aks_s2s_onprem_shared_key" {
+#   count = var.enable_grouper_aks_s2s_vpn ? 1 : 0
 
-  name         = "grouper-aks-s2s-vpn-shared-key"
-  value        = local.grouper_aks_s2s_onprem_shared_key
-  key_vault_id = data.azurerm_key_vault.dev.id
-  content_type = "text/plain"
-}
+#   name         = "grouper-aks-s2s-vpn-shared-key"
+#   value        = local.grouper_aks_s2s_onprem_shared_key
+#   key_vault_id = data.azurerm_key_vault.dev.id
+#   content_type = "text/plain"
+# }
 
-resource "azurerm_key_vault_secret" "prod_grouper_aks_s2s_onprem_shared_key" {
-  count = var.enable_grouper_aks_s2s_vpn ? 1 : 0
+# resource "azurerm_key_vault_secret" "prod_grouper_aks_s2s_onprem_shared_key" {
+#   count = var.enable_grouper_aks_s2s_vpn ? 1 : 0
 
-  name         = "grouper-aks-s2s-vpn-shared-key"
-  value        = local.grouper_aks_s2s_onprem_shared_key
-  key_vault_id = data.azurerm_key_vault.prod.id
-  content_type = "text/plain"
-}
+#   name         = "grouper-aks-s2s-vpn-shared-key"
+#   value        = local.grouper_aks_s2s_onprem_shared_key
+#   key_vault_id = data.azurerm_key_vault.prod.id
+#   content_type = "text/plain"
+# }
